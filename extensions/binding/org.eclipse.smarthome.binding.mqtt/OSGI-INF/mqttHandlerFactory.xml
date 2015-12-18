@@ -10,7 +10,7 @@
 -->
 <scr:component xmlns:scr="http://www.osgi.org/xmlns/scr/v1.1.0" immediate="true" name="binding.mqtt">
 
-   <implementation class="org.eclipse.smarthome.binding.mqtt.internal.mqttHandlerFactory"/>
+   <implementation class="org.eclipse.smarthome.binding.mqtt.internal.MqttHandlerFactory"/>
 
    <service>
       <provide interface="org.eclipse.smarthome.core.thing.binding.ThingHandlerFactory"/>
