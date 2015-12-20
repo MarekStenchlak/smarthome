@@ -13,10 +13,13 @@ import org.eclipse.smarthome.binding.mqtt.internal.MqttMessagePublisher;
 import org.eclipse.smarthome.binding.mqtt.internal.MqttMessageSubscriber;
 import org.eclipse.smarthome.core.thing.Bridge;
 import org.eclipse.smarthome.core.thing.ChannelUID;
+import org.eclipse.smarthome.core.thing.Thing;
 import org.eclipse.smarthome.core.thing.ThingStatus;
 import org.eclipse.smarthome.core.thing.ThingTypeUID;
 import org.eclipse.smarthome.core.thing.binding.BaseBridgeHandler;
+import org.eclipse.smarthome.core.thing.binding.ThingHandler;
 import org.eclipse.smarthome.core.types.Command;
+import org.eclipse.smarthome.io.transport.mqtt.MqttConnectionObserver;
 import org.eclipse.smarthome.io.transport.mqtt.MqttService;
 import org.osgi.framework.ServiceReference;
 import org.osgi.service.cm.Configuration;
@@ -29,7 +32,7 @@ import org.slf4j.LoggerFactory;
  *
  * @author Marcus of Wetware Labs - Initial contribution
  */
-public class MqttBridgeHandler extends BaseBridgeHandler {
+public class MqttBridgeHandler extends BaseBridgeHandler implements MqttConnectionObserver {
 
     public final static Set<ThingTypeUID> SUPPORTED_THING_TYPES = Collections.singleton(THING_TYPE_BRIDGE);
 
@@ -46,6 +49,18 @@ public class MqttBridgeHandler extends BaseBridgeHandler {
         super(mqttBridge);
     }
 
+    /**
+     * Initializes the topics for this bridge
+     */
+    private void initializeTopics() {
+        for (Thing thing : getThing().getThings()) {
+            ThingHandler handler = thing.getHandler();
+            if (handler != null) {
+                handler.initialize();
+            }
+        }
+    }
+
     @Override
     public void handleCommand(ChannelUID channelUID, Command command) {
         // TODO Auto-generated method stub. No implementation needed?
@@ -56,7 +71,7 @@ public class MqttBridgeHandler extends BaseBridgeHandler {
      *
      * @return broker name
      */
-    String getBroker() {
+    public String getBroker() {
         return broker;
     }
 
@@ -111,6 +126,7 @@ public class MqttBridgeHandler extends BaseBridgeHandler {
             // get a reference to org.eclipse.smarthome.io.transport.mqtt service
             ServiceReference<MqttService> mqttServiceReference = bundleContext.getServiceReference(MqttService.class);
             mqttService = bundleContext.getService(mqttServiceReference);
+            Dictionary<String, Object> properties = null;
             try {
                 // get reference to ConfigurationAdmin and update the configuration of io.transport.mqtt service (PID is
                 // actually org.eclipse.smarthome.mqtt)
@@ -120,39 +136,49 @@ public class MqttBridgeHandler extends BaseBridgeHandler {
                     ConfigurationAdmin confAdmin = bundleContext.getService(configurationAdminReference);
 
                     Configuration mqttServiceConf = confAdmin.getConfiguration(MQTT_SERVICE_PID);
-                    Dictionary<String, Object> properties = mqttServiceConf.getProperties();
-                    if (properties == null) {
-                        // confAdmin.createFactoryConfiguration(MQTT_SERVICE_PID);
-                        // properties = mqttServiceConf.getProperties();
-                        properties = new Hashtable<String, Object>();
-                        properties.put("service.pid", MQTT_SERVICE_PID); // CHECK! initialize the PID. Is this
-                                                                         // necessary?
-                    }
-
-                    if (getConfig().get(URL) != null) {
-                        properties.put(broker + "." + URL, getConfig().get(URL));
-                    }
-                    if (getConfig().get(USER) != null) {
-                        properties.put(broker + "." + USER, getConfig().get(USER));
-                    }
-                    if (getConfig().get(PWD) != null) {
-                        properties.put(broker + "." + PWD, getConfig().get(PWD));
-                    }
-                    if (getConfig().get(CLIENTID) != null) {
-                        properties.put(broker + "." + CLIENTID, getConfig().get(CLIENTID));
-                    }
-                    // mqttServiceConf.update(properties); // FIXME! Updating properties like this via Configuration
-                    // class does not notify the mqttservice!
-                    mqttService.updated(properties); // CHECK! Is this safe to do? Properties set this way are not
-                                                     // propagated to ConfigurationAdmin..
-                    updateStatus(ThingStatus.ONLINE);
+                    properties = mqttServiceConf.getProperties();
                 }
+
+            } catch (Exception e) {
+                logger.error("Failed to get Service Admin");
+            }
+            try {
+                if (properties == null) {
+                    // confAdmin.createFactoryConfiguration(MQTT_SERVICE_PID);
+                    // properties = mqttServiceConf.getProperties();
+                    properties = new Hashtable<String, Object>();
+                    properties.put("service.pid", MQTT_SERVICE_PID); // CHECK! initialize the PID. Is this
+                                                                     // necessary?
+                }
+
+                if (getConfig().get(URL) != null) {
+                    properties.put(broker + "." + URL, getConfig().get(URL));
+                }
+                if (getConfig().get(USER) != null) {
+                    properties.put(broker + "." + USER, getConfig().get(USER));
+                }
+                if (getConfig().get(PWD) != null) {
+                    properties.put(broker + "." + PWD, getConfig().get(PWD));
+                }
+                if (getConfig().get(CLIENTID) != null) {
+                    properties.put(broker + "." + CLIENTID, getConfig().get(CLIENTID));
+                } else {
+                    properties.put(broker + "." + CLIENTID, getThing().getUID().getId());
+                }
+
+                // mqttServiceConf.update(properties); // FIXME! Updating properties like this via Configuration
+                // class does not notify the mqttservice!
+                mqttService.updated(properties); // CHECK! Is this safe to do? Properties set this way are not
+                                                 // propagated to ConfigurationAdmin..
+                updateStatus(ThingStatus.ONLINE);
+
             } catch (Exception e) {
                 logger.error("Failed to set MQTT broker properties");
             }
         } catch (Exception e) {
             logger.error("Failed to get MQTT service!");
         }
+        initializeTopics();
     }
 
     /***
@@ -160,8 +186,8 @@ public class MqttBridgeHandler extends BaseBridgeHandler {
      */
     @Override
     public void dispose() {
-        logger.debug("Handler disposed.");
-        updateStatus(ThingStatus.REMOVED);
+        logger.debug("Mqtt Handler disposed.");
+        super.dispose();
     }
 
     /***
@@ -180,6 +206,13 @@ public class MqttBridgeHandler extends BaseBridgeHandler {
             // no action needed yet
         }
         return result;
+    }
+
+    @Override
+    public void setConnected(boolean connected) {
+        // TODO Auto-generated method stub
+        logger.debug("MQQT BRIDGE = connected = {}", connected);
+
     }
 
 }

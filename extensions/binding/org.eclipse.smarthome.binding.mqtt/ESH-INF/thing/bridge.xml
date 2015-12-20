@@ -10,17 +10,19 @@
         <description>The Mqtt Bridge is a container for MQTT topics associated with a single MQTT broker</description>
 
         <config-description>
-            <parameter name="broker" type="text">
+ <!--             <parameter name="broker" type="text">
                 <context>broker</context>
                 <label>MQTT server name</label>
                 <description>Name of the MQTT server.</description>
                 <required>true</required>
             </parameter>
+--> 
             <parameter name="url" type="text">
                 <context>url</context>
                 <label>URL</label>
                 <description>URL of the MQTT server.</description>
-                <required>false</required>
+                <default>tcp://localhost:1883</default>
+                <required>true</required>
             </parameter>
             <parameter name="user" type="text">
                 <context>username</context>

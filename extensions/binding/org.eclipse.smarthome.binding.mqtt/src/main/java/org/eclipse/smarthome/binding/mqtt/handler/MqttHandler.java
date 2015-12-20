@@ -40,6 +40,7 @@ import org.eclipse.smarthome.core.library.types.StopMoveType;
 import org.eclipse.smarthome.core.library.types.StringType;
 import org.eclipse.smarthome.core.library.types.UpDownType;
 import org.eclipse.smarthome.core.thing.Bridge;
+import org.eclipse.smarthome.core.thing.Channel;
 import org.eclipse.smarthome.core.thing.ChannelUID;
 import org.eclipse.smarthome.core.thing.Thing;
 import org.eclipse.smarthome.core.thing.ThingStatus;
@@ -93,10 +94,15 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
     @Override
     public void mqttCommandReceived(String topic, String command) {
 
-        for (String channel : itemList.keySet()) {
+        logger.debug("MQTT: Received command (topic '{}' payload '{}')", topic, command);
+
+        // for (String channel : itemList.keySet()) {
+        for (Channel channel : getThing().getChannels()) {
             // go through every active (linked) channel and check if the Item associated with it has DataTypes that we
             // can cast the command into
-            if (isLinked(channel)) {
+
+            // if (isLinked(channel)) {
+            if (true) {
                 for (Class<? extends Type> asc : itemList.get(channel).getAcceptedDataTypes()) {
 
                     try {
@@ -107,7 +113,7 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
                             logger.debug(
                                     "MQTT: Received state (topic '{}'). Propagating payload '{}' as type '{}' to channel '{}')",
                                     topic, command, c.getClass().getName(), channel);
-                            postCommand(channel, c);
+                            // postCommand(channel, c);
                             break;
                         }
                     } catch (NoSuchMethodException e) {
@@ -129,11 +135,18 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
      */
     @Override
     public void mqttStateReceived(String topic, String state) {
-
+        logger.debug("MQTT: Received state (topic '{}' payload '{}')", topic, state);
+        for (Channel channel : getThing().getChannels()) {
+            // logger.debug("Channels'{}') linked? {}", channel.getUID().toString(), channel.isLinked());
+        }
         for (String channel : itemList.keySet()) {
+
             // go through every active (linked) channel and check if the Item associated with it has DataTypes that we
             // can cast the state into
-            if (isLinked(channel)) {
+
+            logger.debug("Channel for (topic '{}' payload '{}') {}:{}", topic, state, channel, isLinked(channel));
+
+            if (isLinked(channel) || true) {
                 for (Class<? extends Type> asc : itemList.get(channel).getAcceptedDataTypes()) {
 
                     try {
@@ -170,11 +183,12 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
         }
 
         try {
-            logger.debug("Setting up Subscriber for topic {}", topic);
-            if (transform == null) {
+            if (transform == null || StringUtils.isBlank(transform)) {
                 transform = "default";
             }
+
             subscriber = new MqttMessageSubscriber(
+                    // getBridgeHandler().getUID().getId() + ":" + topic + ":" + type + ":" + transform, this);
                     getBridgeHandler().getBroker() + ":" + topic + ":" + type + ":" + transform, this);
 
             getBridgeHandler().registerMessageConsumer(subscriber);
@@ -199,7 +213,7 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
 
         try {
             logger.debug("Setting up Publisher for topic {}", topic);
-            if (transform == null) {
+            if (transform == null || StringUtils.isBlank(transform)) {
                 transform = "default";
             }
             publisher = new MqttMessagePublisher(
@@ -221,14 +235,22 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
         logger.debug("Initializing MQTT topic handler.");
         final String topicId = (String) getConfig().get(TOPIC_ID);
         final String type = (String) getConfig().get(TYPE);
+
+        String transform = null;
+        try {
+            transform = (String) getConfig().get(TRANSFORM);
+        } catch (Exception e) {
+            //
+        }
+
         if (topicId != null) {
             if (type != null) {
                 if (getBridgeHandler() != null) {
                     if (getConfig().get(DIRECTION) != null) {
                         if (getConfig().get(DIRECTION).equals("in")) {
-                            setupSubscriber(topicId, type, (String) getConfig().get(TRANSFORM));
+                            setupSubscriber(topicId, type, transform);
                         } else if (getConfig().get(DIRECTION).equals("out")) {
-                            setupPublisher(topicId, type, (String) getConfig().get(TRANSFORM));
+                            setupPublisher(topicId, type, transform);
                         } else {
                             throw new IllegalArgumentException("MQTT direction invalid!");
                         }
@@ -272,13 +294,15 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
         itemList.put(CHANNEL_COLOR, new ColorItem(""));
 
         updateStatus(ThingStatus.ONLINE);
+        logger.debug("MQTT topic {} handler initialized.", topicId);
+
     }
 
     /***
      * Callback from framework when this Topic handler is deleted
      */
     @Override
-    public void dispose() {
+    public void preDispose() {
         logger.debug("Disposing MQTT topic handler.");
         if (publisher != null) {
             getBridgeHandler().unRegisterMessageProducer(publisher);
@@ -286,7 +310,8 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
         if (subscriber != null) {
             getBridgeHandler().unRegisterMessageConsumer(subscriber);
         }
-        updateStatus(ThingStatus.REMOVED);
+        super.preDispose();
+
     }
 
     /**
@@ -328,10 +353,10 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
      *
      * @param thing Updated thing
      */
-    @Override
-    public void thingUpdated(Thing topic) {
-        super.thingUpdated(topic);
-    }
+    // @Override
+    // public void thingUpdated(Thing topic) {
+    // super.thingUpdated(topic);
+    // }
 
     /***
      * Get the MQTT bridge handler. If this is first time, register this Topic handler instance to receive events from
