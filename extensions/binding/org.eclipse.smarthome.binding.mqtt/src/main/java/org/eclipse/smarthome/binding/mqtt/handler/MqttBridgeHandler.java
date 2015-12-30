@@ -211,7 +211,7 @@ public class MqttBridgeHandler extends BaseBridgeHandler implements MqttConnecti
     @Override
     public void setConnected(boolean connected) {
         // TODO Auto-generated method stub
-        logger.debug("MQQT BRIDGE = connected = {}", connected);
+        logger.debug("MQTT BRIDGE = connected = {}", connected);
 
     }
 
