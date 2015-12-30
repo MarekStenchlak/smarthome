@@ -7,6 +7,7 @@
  */
 package org.eclipse.smarthome.io.transport.mqtt.internal;
 
+import java.io.File;
 import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.Properties;
@@ -316,7 +317,9 @@ public class MqttBrokerConnection implements MqttCallback {
                 clientId = MqttClient.generateClientId();
             }
 
-            String tmpDir = System.getProperty("java.io.tmpdir") + "/" + name;
+            // String tmpDir = System.getProperty("java.io.tmpdir") + "/" + name;
+            String tmpDir = System.getProperty("java.io.tmpdir") + File.separator + name;
+
             MqttDefaultFilePersistence dataStore = new MqttDefaultFilePersistence(tmpDir);
             logger.debug("Creating new client for '{}' using id '{}' and file store '{}'", url, clientId, tmpDir);
             client = new MqttClient(url, clientId, dataStore);
@@ -425,6 +428,7 @@ public class MqttBrokerConnection implements MqttCallback {
      * @param publisher to add.
      */
     public synchronized void addProducer(MqttMessageProducer publisher) {
+        logger.trace("Add message producer for broker '{}'", name);
         producers.add(publisher);
         if (started) {
             startProducer(publisher);
@@ -481,6 +485,7 @@ public class MqttBrokerConnection implements MqttCallback {
      * @param consumer to add.
      */
     public synchronized void addConsumer(MqttMessageConsumer subscriber) {
+        logger.debug("Adding message consumer for broker '{}' on topic '{}'", name, subscriber.getTopic());
         consumers.add(subscriber);
         if (started) {
             startConsumer(subscriber);

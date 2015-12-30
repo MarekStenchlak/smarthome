@@ -9,6 +9,9 @@ package org.eclipse.smarthome.io.transport.mqtt.internal;
 
 import java.util.TimerTask;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * Connection helper which can be executed periodically to try to reconnect to a broker if the connection was previously
  * lost.
@@ -16,6 +19,7 @@ import java.util.TimerTask;
  * @author Davy Vanherbergen
  */
 public class MqttBrokerConnectionHelper extends TimerTask {
+    private final Logger logger = LoggerFactory.getLogger(MqttBrokerConnection.class);
 
     private MqttBrokerConnection connection;
 
@@ -33,8 +37,10 @@ public class MqttBrokerConnectionHelper extends TimerTask {
         try {
             connection.start();
         } catch (Exception e) {
+
             // reconnect failed,
             // maybe we will have more luck next time...
+            logger.info("Connection lost for broker '{}':", connection.getName().toString(), e);
         }
     }
 
