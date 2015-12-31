@@ -3,10 +3,11 @@ package org.eclipse.smarthome.binding.mqtt.discovery;
 import static org.eclipse.smarthome.binding.mqtt.MqttBindingConstants.*;
 
 import java.util.HashMap;
-import java.util.List;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.lang.StringUtils;
 import org.eclipse.smarthome.binding.mqtt.handler.MqttBridgeHandler;
 import org.eclipse.smarthome.binding.mqtt.handler.MqttBridgeListener;
 import org.eclipse.smarthome.binding.mqtt.internal.MqttMessageSubscriber;
@@ -27,10 +28,11 @@ public class MqttDiscoveryService extends AbstractDiscoveryService
             subscribe();
         }
     };
+    private static final String TEMP_COLON_REPLACEMENT = "COLON";
 
     private MqttBridgeHandler bridgeHandler;
 
-    private List<String> discoveredTopics;
+    private HashSet<String> discoveredTopics = new HashSet<String>();
 
     private final static Logger logger = LoggerFactory.getLogger(MqttDiscoveryService.class);
 
@@ -107,34 +109,58 @@ public class MqttDiscoveryService extends AbstractDiscoveryService
      */
     @Override
     public void mqttStateReceived(String topic, String state) {
-        logger.info("discovery received topic: {}", topic);
-        logger.debug("MQTT: Received state (topic '{}' payload '{}')", topic, state);
+        logger.trace("MQTT topic discovery: Received state (topic '{}' payload '{}')", topic, state.toString());
 
-        // if (!topic_discovered(topic)) {
+        if (!discoveredTopics.contains(topic)) {
+            String id = makeTopicString(topic);
 
-        logger.trace("Adding new topic thing on {} with id '{}' to Smarthome inbox", topic, topic);
-        Map<String, Object> properties = new HashMap<>(2);
-        properties.put(TOPIC_ID, topic);
-        properties.put(TYPE, "state");
-        properties.put(DIRECTION, "in");
-        properties.put(TRANSFORM, "default");
-        ThingUID uid = new ThingUID(THING_TYPE_TOPIC, topic);
-        if (uid != null) {
-            DiscoveryResult result = DiscoveryResultBuilder.create(uid).withProperties(properties).withLabel("topic ")
-                    .build();
-            thingDiscovered(result);
-        }
-        discoveredTopics.add(topic);
-    }
-    // }
-
-    private boolean topic_discovered(String topic) {
-        for (String str : discoveredTopics) {
-            if (str.trim().contains(topic)) {
-                return true;
+            logger.trace("Adding new topic thing on {} with id '{}' to Smarthome inbox", topic, id);
+            Map<String, Object> properties = new HashMap<>(2);
+            properties.put(TOPIC_ID, topic);
+            properties.put(TYPE, "state");
+            properties.put(DIRECTION, "in");
+            properties.put(TRANSFORM, "default");
+            ThingUID uid = new ThingUID(THING_TYPE_TOPIC, id);
+            if (uid != null) {
+                DiscoveryResult result = DiscoveryResultBuilder.create(uid).withProperties(properties)
+                        .withLabel("topic " + id).build();
+                thingDiscovered(result);
             }
+            discoveredTopics.add(topic);
         }
-        return false;
     }
+
+    String makeTopicString(String topicString) {
+
+        if (StringUtils.isEmpty(topicString)) {
+            return new String("empty");
+        }
+
+        String[] result = topicString.split("/");
+        for (int i = 0; i < result.length; i++) {
+            result[i] = capitalize(result[i]);
+        }
+
+        String resulttopic = StringUtils.join(result, "");
+        return resulttopic;
+    }
+
+    public static String capitalize(String string) {
+        if (string == null || string.length() == 0) {
+            return string;
+        }
+        char c[] = string.toCharArray();
+        c[0] = Character.toUpperCase(c[0]);
+        return new String(c);
+    }
+    //
+    // private boolean topic_discovered(String topic) {
+    // for (String str : discoveredTopics) {
+    // if (str.trim().contains(topic)) {
+    // return true;
+    // }
+    // }
+    // return false;
+    // }
 
 }
