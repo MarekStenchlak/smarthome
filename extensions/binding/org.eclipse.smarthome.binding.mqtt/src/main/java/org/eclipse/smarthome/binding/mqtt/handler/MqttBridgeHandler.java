@@ -111,6 +111,14 @@ public class MqttBridgeHandler extends BaseBridgeHandler implements MqttConnecti
         mqttService.unregisterMessageProducer(broker, publisher);
     }
 
+    public void registerConnectionObserver(String brokerName, MqttConnectionObserver connectionObserver) {
+        mqttService.registerConnectionObserver(brokerName, connectionObserver);
+    }
+
+    public void unregisterConnectionObserver(String brokerName, MqttConnectionObserver connectionObserver) {
+        mqttService.unregisterConnectionObserver(brokerName, connectionObserver);
+    }
+
     /***
      * Called by the framework when this MQTT bridge is initialized.
      */
@@ -166,11 +174,12 @@ public class MqttBridgeHandler extends BaseBridgeHandler implements MqttConnecti
                     properties.put(broker + "." + CLIENTID, getThing().getUID().getId());
                 }
 
+                logger.debug("Initiate for broker {}", broker);
                 // mqttServiceConf.update(properties); // FIXME! Updating properties like this via Configuration
                 // class does not notify the mqttservice!
                 mqttService.updated(properties); // CHECK! Is this safe to do? Properties set this way are not
                                                  // propagated to ConfigurationAdmin..
-                updateStatus(ThingStatus.ONLINE);
+                // updateStatus(ThingStatus.ONLINE);
 
             } catch (Exception e) {
                 logger.error("Failed to set MQTT broker properties");
@@ -179,6 +188,7 @@ public class MqttBridgeHandler extends BaseBridgeHandler implements MqttConnecti
             logger.error("Failed to get MQTT service!");
         }
         initializeTopics();
+        registerConnectionObserver(broker, this);
     }
 
     /***
@@ -210,8 +220,13 @@ public class MqttBridgeHandler extends BaseBridgeHandler implements MqttConnecti
 
     @Override
     public void setConnected(boolean connected) {
-        // TODO Auto-generated method stub
+        // TODO this should trigger the online/offline once it is working
         logger.debug("MQTT BRIDGE = connected = {}", connected);
+        if (connected) {
+            updateStatus(ThingStatus.ONLINE);
+        } else {
+            updateStatus(ThingStatus.OFFLINE);
+        }
 
     }
 

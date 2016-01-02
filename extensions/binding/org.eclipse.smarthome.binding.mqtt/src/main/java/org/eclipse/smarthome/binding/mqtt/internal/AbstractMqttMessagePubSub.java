@@ -9,9 +9,8 @@
 package org.eclipse.smarthome.binding.mqtt.internal;
 
 import org.apache.commons.lang.StringUtils;
-import org.openhab.core.binding.BindingConfig;
-import org.openhab.core.transform.TransformationHelper;
-import org.openhab.core.transform.TransformationService;
+import org.eclipse.smarthome.core.transform.TransformationHelper;
+import org.eclipse.smarthome.core.transform.TransformationService;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.FrameworkUtil;
 import org.slf4j.Logger;
@@ -24,7 +23,9 @@ import org.slf4j.LoggerFactory;
  * @author Davy Vanherbergen
  * @since 1.3.0
  */
-public abstract class AbstractMqttMessagePubSub implements BindingConfig {
+
+// TODO: Check if this can be incorporated in the handler or factory
+public abstract class AbstractMqttMessagePubSub {
 
     private static final Logger logger = LoggerFactory.getLogger(AbstractMqttMessagePubSub.class);
 
