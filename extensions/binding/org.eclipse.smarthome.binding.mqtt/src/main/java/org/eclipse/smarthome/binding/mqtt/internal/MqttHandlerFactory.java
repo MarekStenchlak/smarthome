@@ -54,7 +54,7 @@ public class MqttHandlerFactory extends BaseThingHandlerFactory {
         if (MqttBridgeHandler.SUPPORTED_THING_TYPES.contains(thingTypeUID)) {
             MqttBridgeHandler handler = new MqttBridgeHandler((Bridge) thing);
             // TODO: choose discovery method 1 or 2
-            registerMqttDiscoveryService(handler);
+            registerMqttDiscoveryService(handler, thing);
             return handler;
         } else if (MqttHandler.SUPPORTED_THING_TYPES.contains(thingTypeUID)) {
             return new MqttHandler(thing);
@@ -120,8 +120,8 @@ public class MqttHandlerFactory extends BaseThingHandlerFactory {
         }
     }
 
-    private void registerMqttDiscoveryService(MqttBridgeHandler MqttBridgeHandler) {
-        MqttDiscoveryService discoveryService = new MqttDiscoveryService(MqttBridgeHandler);
+    private void registerMqttDiscoveryService(MqttBridgeHandler MqttBridgeHandler, Thing thing) {
+        MqttDiscoveryService discoveryService = new MqttDiscoveryService(MqttBridgeHandler, thing);
         discoveryService.activate();
 
         this.discoveryServiceRegs.put(((ThingHandler) MqttBridgeHandler).getThing().getUID(), bundleContext
