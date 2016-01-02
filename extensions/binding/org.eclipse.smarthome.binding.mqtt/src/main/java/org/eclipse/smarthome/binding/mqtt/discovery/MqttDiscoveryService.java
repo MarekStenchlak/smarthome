@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) 2014 openHAB UG (haftungsbeschraenkt) and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ */
 package org.eclipse.smarthome.binding.mqtt.discovery;
 
 import static org.eclipse.smarthome.binding.mqtt.MqttBindingConstants.*;
@@ -19,6 +26,12 @@ import org.eclipse.smarthome.core.thing.ThingUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * The {@link MqttDiscoveryService} is responsible for discovering MQTT Topics as Things.
+ *
+ * @author Marcel Verpaalen - Initial contribution
+ *
+ */
 public class MqttDiscoveryService extends AbstractDiscoveryService
         implements MqttMessageSubscriberListener, MqttBridgeListener {
 
@@ -32,6 +45,8 @@ public class MqttDiscoveryService extends AbstractDiscoveryService
     private MqttBridgeHandler bridgeHandler;
 
     private HashSet<String> discoveredTopics = new HashSet<String>();
+
+    private MqttMessageSubscriber subscriber;
 
     private final static Logger logger = LoggerFactory.getLogger(MqttDiscoveryService.class);
 
@@ -49,8 +64,8 @@ public class MqttDiscoveryService extends AbstractDiscoveryService
     }
 
     public void activate() {
-        // maxCubeBridgeHandler.registerDeviceStatusListener(this);
         subscribe();
+        removeOlderResults(getTimestampOfLastScan());
     }
 
     @Override
@@ -65,7 +80,8 @@ public class MqttDiscoveryService extends AbstractDiscoveryService
 
     @Override
     public void deactivate() {
-        // maxCubeBridgeHandler.unregisterDeviceStatusListener(this);
+        bridgeHandler.unRegisterMessageConsumer(subscriber);
+        discoveredTopics.clear();
     }
 
     private void subscribe() {
@@ -78,7 +94,7 @@ public class MqttDiscoveryService extends AbstractDiscoveryService
             try {
                 logger.error("Registering discovery subscriber for broker: {}", bridgeHandler.getBroker());
 
-                MqttMessageSubscriber subscriber = new MqttMessageSubscriber(
+                subscriber = new MqttMessageSubscriber(
                         // getBridgeHandler().getUID().getId() + ":" + topic + ":" + type + ":" + transform, this);
                         bridgeHandler.getBroker() + ":" + "#" + ":" + "state" + ":" + "default", this);
 

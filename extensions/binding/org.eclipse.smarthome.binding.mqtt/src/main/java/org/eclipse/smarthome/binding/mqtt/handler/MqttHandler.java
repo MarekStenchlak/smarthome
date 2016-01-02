@@ -60,6 +60,8 @@ import com.google.common.collect.Sets;
  * relevant channels and vice versa.
  *
  * @author Marcus of Wetware Labs - Initial contribution
+ * @author Marcel Verpaalen - ESH version
+ *
  */
 public class MqttHandler extends BaseThingHandler implements MqttBridgeListener, MqttMessageSubscriberListener {
 
