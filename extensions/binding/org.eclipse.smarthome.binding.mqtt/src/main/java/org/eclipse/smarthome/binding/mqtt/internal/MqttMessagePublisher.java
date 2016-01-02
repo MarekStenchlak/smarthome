@@ -161,7 +161,7 @@ public class MqttMessagePublisher extends AbstractMqttMessagePubSub implements M
     }
 
     /**
-     * Publish a messge to the given topic.
+     * Publish a message to the given topic.
      *
      * @param topic
      * @param message

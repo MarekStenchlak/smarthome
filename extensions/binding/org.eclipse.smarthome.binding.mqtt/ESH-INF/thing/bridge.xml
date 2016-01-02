@@ -6,8 +6,8 @@
 
     <!-- MQTT Bridge -->
     <bridge-type id="bridge">
-        <label>Mqtt Bridge</label>
-        <description>The Mqtt Bridge is a container for MQTT topics associated with a single MQTT broker</description>
+        <label>MQTT Bridge</label>
+        <description>The MQTT Bridge is a container for MQTT topics associated with a single MQTT broker</description>
 
         <config-description>
  <!--             <parameter name="broker" type="text">

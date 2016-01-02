@@ -252,6 +252,9 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
                             setupSubscriber(topicId, type, transform);
                         } else if (getConfig().get(DIRECTION).equals("out")) {
                             setupPublisher(topicId, type, transform);
+                        } else if (getConfig().get(DIRECTION).equals("both")) {
+                            setupSubscriber(topicId, type, transform);
+                            setupPublisher(topicId, type, transform);
                         } else {
                             throw new IllegalArgumentException("MQTT direction invalid!");
                         }
