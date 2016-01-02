@@ -60,49 +60,49 @@
 	</thing-type>
 
 	<channel-type id="number-channel">
-		<item-type>number</item-type>
+		<item-type>Number</item-type>
 		<label>Number type MQTT payload</label>
 		<description>Channel for mapping Number types to MQTT messages</description>
 	</channel-type>
 
 	<channel-type id="switch-channel">
-		<item-type>switch</item-type>
+		<item-type>Switch</item-type>
 		<label>Switch type MQTT payload</label>
 		<description>Channel for mapping Switch types to MQTT messages</description>
 	</channel-type>
 
 	<channel-type id="color-channel">
-		<item-type>color</item-type>
+		<item-type>Color</item-type>
 		<label>Color type MQTT payload</label>
 		<description>Channel for mapping Color types to MQTT messages</description>
 	</channel-type>
 
 	<channel-type id="contact-channel">
-		<item-type>contact</item-type>
+		<item-type>Contact</item-type>
 		<label>Contact type MQTT payload</label>
 		<description>Channel for mapping Contact types (OPEN/CLOSED) to MQTT messages</description>
 	</channel-type>
 
 	<channel-type id="datetime-channel">
-		<item-type>datetime</item-type>
+		<item-type>Datetime</item-type>
 		<label>Datetime type MQTT payload</label>
 		<description>Channel for mapping Datetime types to MQTT messages</description>
 	</channel-type>
 
 	<channel-type id="rollershutter-channel">
-		<item-type>rollershutter</item-type>
+		<item-type>Rollershutter</item-type>
 		<label>Rollershutter type MQTT payload</label>
 		<description>Channel for mapping Rollershutter types to MQTT messages</description>
 	</channel-type>
 
 	<channel-type id="dimmer-channel">
-		<item-type>dimmer</item-type>
+		<item-type>Dimmer</item-type>
 		<label>Dimmer type MQTT payload</label>
 		<description>Channel for mapping Dimmer types to MQTT messages</description>
 	</channel-type>
 
 	<channel-type id="string-channel">
-		<item-type>string</item-type>
+		<item-type>String</item-type>
 		<label>string type MQTT payload</label>
 		<description>Channel for mapping string types to MQTT messages</description>
 	</channel-type>
