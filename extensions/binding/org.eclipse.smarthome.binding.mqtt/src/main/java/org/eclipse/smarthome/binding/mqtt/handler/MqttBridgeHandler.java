@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import org.eclipse.smarthome.binding.mqtt.discovery.MqttDiscoveryService2;
 import org.eclipse.smarthome.binding.mqtt.internal.MqttMessagePublisher;
 import org.eclipse.smarthome.binding.mqtt.internal.MqttMessageSubscriber;
 import org.eclipse.smarthome.core.thing.Bridge;
@@ -44,6 +45,8 @@ public class MqttBridgeHandler extends BaseBridgeHandler implements MqttConnecti
 
     /** MqttService for sending/receiving messages **/
     private MqttService mqttService;
+
+    private MqttDiscoveryService2 discoveryService;
 
     public MqttBridgeHandler(Bridge mqttBridge) {
         super(mqttBridge);
@@ -189,6 +192,7 @@ public class MqttBridgeHandler extends BaseBridgeHandler implements MqttConnecti
         }
         initializeTopics();
         registerConnectionObserver(broker, this);
+        // registerMqttDiscoveryService(mqttService, broker);
     }
 
     /***
@@ -197,6 +201,7 @@ public class MqttBridgeHandler extends BaseBridgeHandler implements MqttConnecti
     @Override
     public void dispose() {
         logger.debug("Mqtt Handler disposed.");
+        // discoveryService.deactivate();
         super.dispose();
     }
 
@@ -220,8 +225,6 @@ public class MqttBridgeHandler extends BaseBridgeHandler implements MqttConnecti
 
     @Override
     public void setConnected(boolean connected) {
-        // TODO this should trigger the online/offline once it is working
-        logger.debug("MQTT BRIDGE = connected = {}", connected);
         if (connected) {
             updateStatus(ThingStatus.ONLINE);
         } else {
@@ -230,4 +233,9 @@ public class MqttBridgeHandler extends BaseBridgeHandler implements MqttConnecti
 
     }
 
+    private void registerMqttDiscoveryService(MqttService mqttService, String brokerName) {
+        // TODO: choose discovery method 1 or 2
+        discoveryService = new MqttDiscoveryService2(mqttService, brokerName);
+        discoveryService.activate();
+    }
 }

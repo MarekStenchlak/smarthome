@@ -5,7 +5,7 @@
         xsi:schemaLocation="http://eclipse.org/smarthome/schemas/binding/v1.0.0 http://eclipse.org/smarthome/schemas/binding-1.0.0.xsd">
 
     <name>mqtt Binding</name>
-    <description>This is the binding for mqtt.</description>
-    <author>d</author>
+    <description>This is the binding for MQTT.</description>
+    <author>Marcel Verpaalen / Marcus (Wetware Labs) / Davy Vanherbergen</author>
 
 </binding:binding>
