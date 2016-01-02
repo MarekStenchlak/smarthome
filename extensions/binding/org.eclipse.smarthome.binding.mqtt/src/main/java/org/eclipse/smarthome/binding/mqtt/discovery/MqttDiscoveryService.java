@@ -28,7 +28,6 @@ public class MqttDiscoveryService extends AbstractDiscoveryService
             subscribe();
         }
     };
-    private static final String TEMP_COLON_REPLACEMENT = "COLON";
 
     private MqttBridgeHandler bridgeHandler;
 
@@ -96,7 +95,7 @@ public class MqttDiscoveryService extends AbstractDiscoveryService
 
     @Override
     public void mqttCommandReceived(String topic, String command) {
-        // TODO Auto-generated method stub
+        // Ignore for now
 
     }
 
@@ -130,7 +129,7 @@ public class MqttDiscoveryService extends AbstractDiscoveryService
         }
     }
 
-    String makeTopicString(String topicString) {
+    private String makeTopicString(String topicString) {
 
         if (StringUtils.isEmpty(topicString)) {
             return new String("empty");
@@ -145,7 +144,7 @@ public class MqttDiscoveryService extends AbstractDiscoveryService
         return resulttopic;
     }
 
-    public static String capitalize(String string) {
+    private static String capitalize(String string) {
         if (string == null || string.length() == 0) {
             return string;
         }
@@ -153,14 +152,5 @@ public class MqttDiscoveryService extends AbstractDiscoveryService
         c[0] = Character.toUpperCase(c[0]);
         return new String(c);
     }
-    //
-    // private boolean topic_discovered(String topic) {
-    // for (String str : discoveredTopics) {
-    // if (str.trim().contains(topic)) {
-    // return true;
-    // }
-    // }
-    // return false;
-    // }
 
 }

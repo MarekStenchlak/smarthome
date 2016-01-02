@@ -13,7 +13,7 @@ import org.eclipse.smarthome.core.types.Command;
 import org.eclipse.smarthome.core.types.State;
 import org.eclipse.smarthome.io.transport.mqtt.MqttMessageProducer;
 import org.eclipse.smarthome.io.transport.mqtt.MqttSenderChannel;
-import org.openhab.model.item.binding.BindingConfigParseException;
+import org.eclipse.smarthome.model.item.BindingConfigParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
