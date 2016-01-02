@@ -142,7 +142,7 @@ public class MqttDiscoveryService extends AbstractDiscoveryService
             ThingUID uid = new ThingUID(THING_TYPE_TOPIC, id);
             if (uid != null) {
                 DiscoveryResult result = DiscoveryResultBuilder.create(uid).withProperties(properties)
-                        .withBridge(bridge.getUID()).withLabel("topic " + id).build();
+                        .withBridge(bridge.getUID()).withLabel("topic: " + topic).build();
                 thingDiscovered(result);
             }
             discoveredTopics.add(topic);
