@@ -22,6 +22,7 @@ import org.eclipse.smarthome.binding.mqtt.internal.MqttMessageSubscriberListener
 import org.eclipse.smarthome.config.discovery.AbstractDiscoveryService;
 import org.eclipse.smarthome.config.discovery.DiscoveryResult;
 import org.eclipse.smarthome.config.discovery.DiscoveryResultBuilder;
+import org.eclipse.smarthome.core.thing.Thing;
 import org.eclipse.smarthome.core.thing.ThingUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,12 +49,15 @@ public class MqttDiscoveryService extends AbstractDiscoveryService
 
     private MqttMessageSubscriber subscriber;
 
+    private Thing bridge;
+
     private final static Logger logger = LoggerFactory.getLogger(MqttDiscoveryService.class);
 
-    public MqttDiscoveryService(MqttBridgeHandler mqttBridgeHandler) {
+    public MqttDiscoveryService(MqttBridgeHandler mqttBridgeHandler, Thing thing) {
         super(10);
         // super(MqttHandler.SUPPORTED_THING_TYPES, 10, true);
         this.bridgeHandler = mqttBridgeHandler;
+        this.bridge = thing;
     }
 
     @Override
@@ -138,7 +142,7 @@ public class MqttDiscoveryService extends AbstractDiscoveryService
             ThingUID uid = new ThingUID(THING_TYPE_TOPIC, id);
             if (uid != null) {
                 DiscoveryResult result = DiscoveryResultBuilder.create(uid).withProperties(properties)
-                        .withLabel("topic " + id).build();
+                        .withBridge(bridge.getUID()).withLabel("topic " + id).build();
                 thingDiscovered(result);
             }
             discoveredTopics.add(topic);

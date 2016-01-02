@@ -40,7 +40,6 @@ import org.eclipse.smarthome.core.library.types.StopMoveType;
 import org.eclipse.smarthome.core.library.types.StringType;
 import org.eclipse.smarthome.core.library.types.UpDownType;
 import org.eclipse.smarthome.core.thing.Bridge;
-import org.eclipse.smarthome.core.thing.Channel;
 import org.eclipse.smarthome.core.thing.ChannelUID;
 import org.eclipse.smarthome.core.thing.Thing;
 import org.eclipse.smarthome.core.thing.ThingStatus;
@@ -98,13 +97,13 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
 
         logger.debug("MQTT: Received command (topic '{}' payload '{}')", topic, command);
 
-        // for (String channel : itemList.keySet()) {
-        for (Channel channel : getThing().getChannels()) {
+        for (String channel : itemList.keySet()) {
+            // for (Channel channel : getThing().getChannels()) {
             // go through every active (linked) channel and check if the Item associated with it has DataTypes that we
             // can cast the command into
 
-            // if (isLinked(channel)) {
-            if (true) {
+            if (isLinked(channel)) {
+                // if (true) {
                 for (Class<? extends Type> asc : itemList.get(channel).getAcceptedDataTypes()) {
 
                     try {
@@ -138,15 +137,15 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
     @Override
     public void mqttStateReceived(String topic, String state) {
         logger.debug("MQTT: Received state (topic '{}' payload '{}')", topic, state);
-        for (Channel channel : getThing().getChannels()) {
-            // logger.debug("Channels'{}') linked? {}", channel.getUID().toString(), channel.isLinked());
-        }
+        // for (Channel channel : getThing().getChannels()) {
+        // logger.debug("Channels'{}') linked? {}", channel.getUID().toString(), channel.isLinked());
+        // }
         for (String channel : itemList.keySet()) {
 
             // go through every active (linked) channel and check if the Item associated with it has DataTypes that we
             // can cast the state into
 
-            logger.debug("Channel for (topic '{}' payload '{}') {}:{}", topic, state, channel, isLinked(channel));
+            logger.trace("Channel for (topic '{}' payload '{}') {}:{}", topic, state, channel, isLinked(channel));
 
             if (isLinked(channel) || true) {
                 for (Class<? extends Type> asc : itemList.get(channel).getAcceptedDataTypes()) {
@@ -156,7 +155,7 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
                         State s = (State) valueOf.invoke(asc, state);
                         if (s != null) {
                             // state could be casted to type 'type'
-                            logger.debug(
+                            logger.trace(
                                     "MQTT: Received state (topic '{}'). Propagating payload '{}' as type '{}' to channel '{}')",
                                     topic, state, s.getClass().getName(), channel);
                             updateState(channel, s);
@@ -295,7 +294,9 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
         itemList.put(CHANNEL_SWITCH, new SwitchItem(""));
         itemList.put(CHANNEL_COLOR, new ColorItem(""));
 
-        updateStatus(ThingStatus.ONLINE);
+        if (getBridgeHandler() != null) {
+            updateStatus(ThingStatus.ONLINE);
+        }
         logger.debug("MQTT topic {} handler initialized.", topicId);
 
     }
@@ -381,5 +382,26 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
             }
         }
         return this.bridgeHandler;
+    }
+
+    /*
+     * (non-Javadoc)
+     *
+     * @see org.eclipse.smarthome.core.thing.binding.BaseThingHandler#
+     * bridgeHandlerInitialized
+     * (org.eclipse.smarthome.core.thing.binding.ThingHandler,
+     * org.eclipse.smarthome.core.thing.Bridge)
+     */
+    @Override
+    protected void bridgeHandlerInitialized(ThingHandler thingHandler, Bridge bridge) {
+        logger.debug("Bridge {} initialized for topic: {}", bridge.getUID().toString(), getThing().getUID().toString());
+        if (bridgeHandler != null) {
+            // bridgeHandler.unRegisterMqttBridgeListener(this);
+            bridgeHandler = null;
+        }
+        this.bridgeHandler = (MqttBridgeHandler) thingHandler;
+        // this.bridgeHandler.registerMqttBridgeListener(this);
+        initialize();
+        super.bridgeHandlerInitialized(thingHandler, bridge);
     }
 }
