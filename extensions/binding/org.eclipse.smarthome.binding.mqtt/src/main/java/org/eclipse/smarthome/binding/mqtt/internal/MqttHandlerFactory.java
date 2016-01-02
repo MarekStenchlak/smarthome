@@ -53,6 +53,7 @@ public class MqttHandlerFactory extends BaseThingHandlerFactory {
 
         if (MqttBridgeHandler.SUPPORTED_THING_TYPES.contains(thingTypeUID)) {
             MqttBridgeHandler handler = new MqttBridgeHandler((Bridge) thing);
+            // TODO: choose discovery method 1 or 2
             registerMqttDiscoveryService(handler);
             return handler;
         } else if (MqttHandler.SUPPORTED_THING_TYPES.contains(thingTypeUID)) {
