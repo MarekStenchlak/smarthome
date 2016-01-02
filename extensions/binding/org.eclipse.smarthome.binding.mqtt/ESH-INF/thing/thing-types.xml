@@ -10,7 +10,7 @@
 			<bridge-type-ref id="bridge" />
 		</supported-bridge-type-refs>
 
-		<label>Mqtt Topic</label>
+		<label>MQTT Topic</label>
 		<description>Topic for MQTT Binding</description>
 
 		<channels>
@@ -46,6 +46,7 @@
 				<options>
 					<option value="in">in</option>
 					<option value="out">out</option>
+					<option value="both">both</option>
 				</options>
 				<default>in</default>
 			</parameter>
