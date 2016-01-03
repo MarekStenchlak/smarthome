@@ -11,19 +11,15 @@ import static org.hamcrest.CoreMatchers.*
 import static org.junit.Assert.*
 import static org.junit.matchers.JUnitMatchers.*
 
-import org.eclipse.smarthome.config.core.Configuration
-import org.eclipse.smarthome.core.thing.Bridge
 import org.eclipse.smarthome.core.thing.ManagedThingProvider
 import org.eclipse.smarthome.core.thing.ThingProvider
 import org.eclipse.smarthome.core.thing.ThingTypeUID
-import org.eclipse.smarthome.core.thing.ThingUID
 import org.eclipse.smarthome.core.thing.binding.ThingHandler
 import org.eclipse.smarthome.test.OSGiTest
 import org.eclipse.smarthome.test.storage.VolatileStorageService
 import org.junit.Before
 import org.junit.Test
 
-import org.eclipse.smarthome.binding.mqtt.handler.mqttHandler
 
 
 
@@ -34,23 +30,22 @@ import org.eclipse.smarthome.binding.mqtt.handler.mqttHandler
  */
 class mqttOSGiTest extends OSGiTest {
 
-	final ThingTypeUID BRIDGE_THING_TYPE_UID = new ThingTypeUID("mqtt", "bridge")
+    final ThingTypeUID BRIDGE_THING_TYPE_UID = new ThingTypeUID("mqtt", "bridge")
 
-	ManagedThingProvider managedThingProvider
-	VolatileStorageService volatileStorageService = new VolatileStorageService()
+    ManagedThingProvider managedThingProvider
+    VolatileStorageService volatileStorageService = new VolatileStorageService()
 
 
-	@Before
-	void setUp() {
-		registerService(volatileStorageService)
-		managedThingProvider = getService(ThingProvider, ManagedThingProvider)
-		assertThat managedThingProvider, is(notNullValue())
-	}
+    @Before
+    void setUp() {
+        registerService(volatileStorageService)
+        managedThingProvider = getService(ThingProvider, ManagedThingProvider)
+        assertThat managedThingProvider, is(notNullValue())
+    }
 
-	@Test
-	void "creation of a mqttHandler"() {
-		mqttHandler handler = getService(ThingHandler,mqttHandler)
-		assertThat handler, is(nullValue())
-	}
-
+    @Test
+    void "creation of a mqttHandler"() {
+        mqttHandler handler = getService(ThingHandler,mqttHandler)
+        assertThat handler, is(nullValue())
+    }
 }

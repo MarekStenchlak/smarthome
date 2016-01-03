@@ -85,8 +85,8 @@
 	</channel-type>
 
 	<channel-type id="datetime-channel">
-		<item-type>Datetime</item-type>
-		<label>Datetime type MQTT payload</label>
+		<item-type>DateTime</item-type>
+		<label>DateTime type MQTT payload</label>
 		<description>Channel for mapping Datetime types to MQTT messages</description>
 	</channel-type>
 

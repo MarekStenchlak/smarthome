@@ -13,10 +13,13 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.apache.commons.lang.StringUtils;
+import org.eclipse.smarthome.binding.mqtt.MqttBindingConstants;
 import org.eclipse.smarthome.binding.mqtt.internal.MqttMessagePublisher;
 import org.eclipse.smarthome.binding.mqtt.internal.MqttMessageSubscriber;
 import org.eclipse.smarthome.binding.mqtt.internal.MqttMessageSubscriberListener;
@@ -40,12 +43,16 @@ import org.eclipse.smarthome.core.library.types.StopMoveType;
 import org.eclipse.smarthome.core.library.types.StringType;
 import org.eclipse.smarthome.core.library.types.UpDownType;
 import org.eclipse.smarthome.core.thing.Bridge;
+import org.eclipse.smarthome.core.thing.Channel;
 import org.eclipse.smarthome.core.thing.ChannelUID;
 import org.eclipse.smarthome.core.thing.Thing;
 import org.eclipse.smarthome.core.thing.ThingStatus;
 import org.eclipse.smarthome.core.thing.ThingTypeUID;
 import org.eclipse.smarthome.core.thing.binding.BaseThingHandler;
 import org.eclipse.smarthome.core.thing.binding.ThingHandler;
+import org.eclipse.smarthome.core.thing.binding.builder.ChannelBuilder;
+import org.eclipse.smarthome.core.thing.binding.builder.ThingBuilder;
+import org.eclipse.smarthome.core.thing.type.ChannelTypeUID;
 import org.eclipse.smarthome.core.types.Command;
 import org.eclipse.smarthome.core.types.State;
 import org.eclipse.smarthome.core.types.Type;
@@ -72,6 +79,8 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
     HashMap<String, GenericItem> itemList = new HashMap<String, GenericItem>();
     List<Class<? extends State>> stateList = new ArrayList<Class<? extends State>>();
     List<Class<? extends Command>> commandList = new ArrayList<Class<? extends Command>>();
+
+    private HashSet<String> channelTopics = new HashSet<String>();
 
     private MqttBridgeHandler bridgeHandler;
 
@@ -137,9 +146,9 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
     @Override
     public void mqttStateReceived(String topic, String state) {
         logger.debug("MQTT: Received state (topic '{}' payload '{}')", topic, state);
-        // for (Channel channel : getThing().getChannels()) {
-        // logger.debug("Channels'{}') linked? {}", channel.getUID().toString(), channel.isLinked());
-        // }
+
+        testNewTopic(makeTopicString(topic));
+
         for (String channel : itemList.keySet()) {
 
             // go through every active (linked) channel and check if the Item associated with it has DataTypes that we
@@ -155,7 +164,7 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
                         State s = (State) valueOf.invoke(asc, state);
                         if (s != null) {
                             // state could be casted to type 'type'
-                            logger.trace(
+                            logger.info(
                                     "MQTT: Received state (topic '{}'). Propagating payload '{}' as type '{}' to channel '{}')",
                                     topic, state, s.getClass().getName(), channel);
                             updateState(channel, s);
@@ -168,6 +177,31 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
                     }
                 }
             }
+        }
+    }
+
+    private synchronized void testNewTopic(String topic) {
+
+        if (!channelTopics.contains(topic)) {
+            logger.info("creating channel for topic '{}' for thing {}", topic, getThing().getUID());
+
+            ThingBuilder thingBuilder = editThing();
+
+            List<Channel> channels = new CopyOnWriteArrayList<>();
+            ChannelTypeUID channelTypeUID = new ChannelTypeUID(MqttBindingConstants.BINDING_ID, topic);
+            Channel channel = ChannelBuilder.create(new ChannelUID(getThing().getUID(), topic), "String")
+                    .withType(channelTypeUID).build();
+            channels.add(channel);
+            thingBuilder.withChannel(channel).withConfiguration(getConfig());
+            updateThing(thingBuilder.build());
+
+            channelTopics.add(topic);
+
+        }
+
+        for (Channel channel : getThing().getChannels()) {
+
+            logger.debug("Channels'{}') linked? {}", channel.getUID().toString(), channel.isLinked());
         }
     }
 
@@ -406,5 +440,29 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
         // this.bridgeHandler.registerMqttBridgeListener(this);
         initialize();
         super.bridgeHandlerInitialized(thingHandler, bridge);
+    }
+
+    private String makeTopicString(String topicString) {
+
+        if (StringUtils.isEmpty(topicString)) {
+            return new String("empty");
+        }
+
+        String[] result = topicString.split("/");
+        for (int i = 0; i < result.length; i++) {
+            result[i] = capitalize(result[i]);
+        }
+
+        String resulttopic = StringUtils.join(result, "");
+        return resulttopic;
+    }
+
+    private static String capitalize(String string) {
+        if (string == null || string.length() == 0) {
+            return string;
+        }
+        char c[] = string.toCharArray();
+        c[0] = Character.toUpperCase(c[0]);
+        return new String(c);
     }
 }
