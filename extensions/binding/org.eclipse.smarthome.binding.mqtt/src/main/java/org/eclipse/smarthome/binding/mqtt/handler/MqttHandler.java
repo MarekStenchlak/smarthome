@@ -24,6 +24,7 @@ import org.eclipse.smarthome.binding.mqtt.internal.MqttMessagePublisher;
 import org.eclipse.smarthome.binding.mqtt.internal.MqttMessageSubscriber;
 import org.eclipse.smarthome.binding.mqtt.internal.MqttMessageSubscriberListener;
 import org.eclipse.smarthome.core.items.GenericItem;
+import org.eclipse.smarthome.core.items.Item;
 import org.eclipse.smarthome.core.library.items.ColorItem;
 import org.eclipse.smarthome.core.library.items.ContactItem;
 import org.eclipse.smarthome.core.library.items.DateTimeItem;
@@ -56,6 +57,7 @@ import org.eclipse.smarthome.core.thing.type.ChannelTypeUID;
 import org.eclipse.smarthome.core.types.Command;
 import org.eclipse.smarthome.core.types.State;
 import org.eclipse.smarthome.core.types.Type;
+import org.eclipse.smarthome.core.types.TypeParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -67,6 +69,15 @@ import com.google.common.collect.Sets;
  *
  * @author Marcus of Wetware Labs - Initial contribution
  * @author Marcel Verpaalen - ESH version
+ *
+ */
+
+/**
+ * @author Marcel
+ *
+ */
+/**
+ * @author Marcel
  *
  */
 public class MqttHandler extends BaseThingHandler implements MqttBridgeListener, MqttMessageSubscriberListener {
@@ -143,30 +154,58 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
      * @param topic MQTT topic of the received message
      * @param state Payload of the message
      */
+    @SuppressWarnings("deprecation")
     @Override
     public void mqttStateReceived(String topic, String state) {
-        logger.debug("MQTT: Received state (topic '{}' payload '{}')", topic, state);
+        logger.trace("MQTT: Received state (topic '{}' payload '{}')", topic, state);
 
-        testNewTopic(makeTopicString(topic));
+        String channelTopicId = makeTopicString(topic);
+        testNewTopic(channelTopicId);
 
+        // new alternative code based for dynamic topic channels
+        for (Channel channelT : getThing().getChannels()) {
+
+            if (channelT.getUID().getId().equals(channelTopicId)) {
+
+                // TODO: add to channel properties the full topic and check on that as well
+                for (Item itemt : channelT.getLinkedItems()) {
+                    State s = TypeParser.parseState(itemt.getAcceptedDataTypes(), state);
+                    if (s != null) {
+                        String channelz = channelT.getUID().getId();
+
+                        // state could be casted to type 'type'
+                        logger.info(
+                                "MQTT: Received state ( topic '{}'). Propagating payload '{}' to dynamic channel '{}' as type '{}')",
+                                topic, state, channelz, s.getClass().getName());
+
+                        updateState(channelz, s);
+                        break;
+                    }
+                }
+            }
+
+        }
+        // Original method Marcus for channels based on specific type
         for (String channel : itemList.keySet()) {
-
             // go through every active (linked) channel and check if the Item associated with it has DataTypes that we
             // can cast the state into
 
             logger.trace("Channel for (topic '{}' payload '{}') {}:{}", topic, state, channel, isLinked(channel));
 
             if (isLinked(channel) || true) {
+
                 for (Class<? extends Type> asc : itemList.get(channel).getAcceptedDataTypes()) {
+                    // for (Class<? extends Type> asc : channelT.getAcceptedItemType()) {
 
                     try {
                         Method valueOf = asc.getMethod("valueOf", String.class);
                         State s = (State) valueOf.invoke(asc, state);
+
                         if (s != null) {
                             // state could be casted to type 'type'
                             logger.info(
-                                    "MQTT: Received state (topic '{}'). Propagating payload '{}' as type '{}' to channel '{}')",
-                                    topic, state, s.getClass().getName(), channel);
+                                    "MQTT: Received state (topic '{}'). Propagating payload '{}' to channel '{}' as type '{}')",
+                                    topic, state, channel, s.getClass().getName());
                             updateState(channel, s);
                             break;
                         }
@@ -177,32 +216,44 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
                     }
                 }
             }
+
         }
     }
 
+    /***
+     * Generates a dynamic channel from a topic if not exists
+     *
+     * @param topic MQTT topic of the received message
+     */
     private synchronized void testNewTopic(String topic) {
 
         if (!channelTopics.contains(topic)) {
-            logger.info("creating channel for topic '{}' for thing {}", topic, getThing().getUID());
 
-            ThingBuilder thingBuilder = editThing();
+            if (getThing().getChannel(topic) == null) {
+                logger.info("creating channel for topic '{}' for thing {}", topic, getThing().getUID());
 
-            List<Channel> channels = new CopyOnWriteArrayList<>();
-            ChannelTypeUID channelTypeUID = new ChannelTypeUID(MqttBindingConstants.BINDING_ID, topic);
-            Channel channel = ChannelBuilder.create(new ChannelUID(getThing().getUID(), topic), "String")
-                    .withType(channelTypeUID).build();
-            channels.add(channel);
-            thingBuilder.withChannel(channel).withConfiguration(getConfig());
-            updateThing(thingBuilder.build());
+                ThingBuilder thingBuilder = editThing();
 
-            channelTopics.add(topic);
+                List<Channel> channels = new CopyOnWriteArrayList<>();
+                ChannelTypeUID channelTypeUID = new ChannelTypeUID(MqttBindingConstants.BINDING_ID, "string-channel");
+                Channel channel = ChannelBuilder.create(new ChannelUID(getThing().getUID(), topic), "String")
+                        .withType(channelTypeUID).build();
+                channels.add(channel);
+                thingBuilder.withChannel(channel).withConfiguration(getConfig());
+                updateThing(thingBuilder.build());
+
+                channelTopics.add(topic);
+
+            } else {
+                logger.info("Channel for topic '{}' for thing {} already exist", topic, getThing().getUID());
+                channelTopics.add(topic);
+            }
 
         }
 
-        for (Channel channel : getThing().getChannels()) {
-
-            logger.debug("Channels'{}') linked? {}", channel.getUID().toString(), channel.isLinked());
-        }
+        // for (Channel channel : getThing().getChannels()) {
+        // logger.debug("Channels'{}') linked? {}", channel.getUID().toString(), channel.isLinked());
+        // }
     }
 
     /**
