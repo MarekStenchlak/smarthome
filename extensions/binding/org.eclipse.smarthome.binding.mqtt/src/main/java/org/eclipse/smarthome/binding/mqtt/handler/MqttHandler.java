@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -68,16 +69,7 @@ import com.google.common.collect.Sets;
  * relevant channels and vice versa.
  *
  * @author Marcus of Wetware Labs - Initial contribution
- * @author Marcel Verpaalen - ESH version
- *
- */
-
-/**
- * @author Marcel
- *
- */
-/**
- * @author Marcel
+ * @author Marcel Verpaalen - ESH version, multi-topic things, dynamic channels
  *
  */
 public class MqttHandler extends BaseThingHandler implements MqttBridgeListener, MqttMessageSubscriberListener {
@@ -160,18 +152,19 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
         logger.trace("MQTT: Received state (topic '{}' payload '{}')", topic, state);
 
         String channelTopicId = makeTopicString(topic);
-        testNewTopic(channelTopicId);
+        testNewTopic(topic, channelTopicId);
 
         // new alternative code based for dynamic topic channels
-        for (Channel channelT : getThing().getChannels()) {
+        for (Channel channel : getThing().getChannels()) {
 
-            if (channelT.getUID().getId().equals(channelTopicId)) {
+            if (channel.getUID().getId().equals(channelTopicId)) {
 
                 // TODO: add to channel properties the full topic and check on that as well
-                for (Item itemt : channelT.getLinkedItems()) {
+                // TODO: Replace depreciated method with new way
+                for (Item itemt : channel.getLinkedItems()) {
                     State s = TypeParser.parseState(itemt.getAcceptedDataTypes(), state);
                     if (s != null) {
-                        String channelz = channelT.getUID().getId();
+                        String channelz = channel.getUID().getId();
 
                         // state could be casted to type 'type'
                         logger.info(
@@ -186,15 +179,16 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
 
         }
         // Original method Marcus for channels based on specific type
-        for (String channel : itemList.keySet()) {
+        for (String channelName : itemList.keySet()) {
             // go through every active (linked) channel and check if the Item associated with it has DataTypes that we
             // can cast the state into
 
-            logger.trace("Channel for (topic '{}' payload '{}') {}:{}", topic, state, channel, isLinked(channel));
+            logger.trace("Channel for (topic '{}' payload '{}') {}:{}", topic, state, channelName,
+                    isLinked(channelName));
 
-            if (isLinked(channel) || true) {
+            if (isLinked(channelName) || true) {
 
-                for (Class<? extends Type> asc : itemList.get(channel).getAcceptedDataTypes()) {
+                for (Class<? extends Type> asc : itemList.get(channelName).getAcceptedDataTypes()) {
                     // for (Class<? extends Type> asc : channelT.getAcceptedItemType()) {
 
                     try {
@@ -205,8 +199,8 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
                             // state could be casted to type 'type'
                             logger.info(
                                     "MQTT: Received state (topic '{}'). Propagating payload '{}' to channel '{}' as type '{}')",
-                                    topic, state, channel, s.getClass().getName());
-                            updateState(channel, s);
+                                    topic, state, channelName, s.getClass().getName());
+                            updateState(channelName, s);
                             break;
                         }
                     } catch (NoSuchMethodException e) {
@@ -223,29 +217,37 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
     /***
      * Generates a dynamic channel from a topic if not exists
      *
-     * @param topic MQTT topic of the received message
+     * @param channelTopicId MQTT topic of the received message
+     *            channelTopicId
      */
-    private synchronized void testNewTopic(String topic) {
+    private synchronized void testNewTopic(String topic, String channelTopicId) {
 
         if (!channelTopics.contains(topic)) {
 
-            if (getThing().getChannel(topic) == null) {
-                logger.info("creating channel for topic '{}' for thing {}", topic, getThing().getUID());
+            if (getThing().getChannel(channelTopicId) == null) {
+                logger.info("creating channel for topic '{}' for thing {}", channelTopicId, getThing().getUID());
 
                 ThingBuilder thingBuilder = editThing();
 
                 List<Channel> channels = new CopyOnWriteArrayList<>();
                 ChannelTypeUID channelTypeUID = new ChannelTypeUID(MqttBindingConstants.BINDING_ID, "string-channel");
-                Channel channel = ChannelBuilder.create(new ChannelUID(getThing().getUID(), topic), "String")
-                        .withType(channelTypeUID).build();
+
+                // This probably needs to be added as a config iso as a property
+                Map<String, String> channelProperties = new HashMap<String, String>();
+                channelProperties.put("ChannelTopic", topic);
+
+                Channel channel = ChannelBuilder.create(new ChannelUID(getThing().getUID(), channelTopicId), "String")
+                        .withType(channelTypeUID).withLabel(topic).withProperties(channelProperties).build();
                 channels.add(channel);
                 thingBuilder.withChannel(channel).withConfiguration(getConfig());
                 updateThing(thingBuilder.build());
 
                 channelTopics.add(topic);
+                logger.info("to enable, enter in console: smarthome setup enableChannel {}",
+                        channel.getUID().getAsString());
 
             } else {
-                logger.info("Channel for topic '{}' for thing {} already exist", topic, getThing().getUID());
+                logger.info("Channel for topic '{}' for thing {} already exist", channelTopicId, getThing().getUID());
                 channelTopics.add(topic);
             }
 
