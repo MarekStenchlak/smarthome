@@ -237,7 +237,8 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
                 channelProperties.put("ChannelTopic", topic);
 
                 Channel channel = ChannelBuilder.create(new ChannelUID(getThing().getUID(), channelTopicId), "String")
-                        .withType(channelTypeUID).withLabel(topic).withProperties(channelProperties).build();
+                        .withType(channelTypeUID).withLabel(topic).build();
+                // .withProperties(channelProperties) gives error
                 channels.add(channel);
                 thingBuilder.withChannel(channel).withConfiguration(getConfig());
                 updateThing(thingBuilder.build());
