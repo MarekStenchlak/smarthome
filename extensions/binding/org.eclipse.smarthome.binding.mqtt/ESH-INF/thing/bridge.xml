@@ -1,49 +1,98 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<thing:thing-descriptions bindingId="mqtt"
-        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xmlns:thing="http://eclipse.org/smarthome/schemas/thing-description/v1.0.0"
-        xsi:schemaLocation="http://eclipse.org/smarthome/schemas/thing-description/v1.0.0 http://eclipse.org/smarthome/schemas/thing-description-1.0.0.xsd">
+<thing:thing-descriptions bindingId="mqtt" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:thing="http://eclipse.org/smarthome/schemas/thing-description/v1.0.0"
+	xsi:schemaLocation="http://eclipse.org/smarthome/schemas/thing-description/v1.0.0 http://eclipse.org/smarthome/schemas/thing-description-1.0.0.xsd">
 
-    <!-- MQTT Bridge -->
-    <bridge-type id="bridge">
-        <label>MQTT Bridge</label>
-        <description>The MQTT Bridge is a container for MQTT topics associated with a single MQTT broker</description>
+	<!-- MQTT Bridge -->
+	<bridge-type id="bridge">
+		<label>MQTT Bridge</label>
+		<description>The MQTT Bridge is a container for MQTT topics associated with a single MQTT broker</description>
 
-        <config-description>
- <!--             <parameter name="broker" type="text">
-                <context>broker</context>
-                <label>MQTT server name</label>
-                <description>Name of the MQTT server.</description>
-                <required>true</required>
-            </parameter>
---> 
-            <parameter name="url" type="text">
-                <context>url</context>
-                <label>URL</label>
-                <description>URL of the MQTT server.</description>
-                <default>tcp://localhost:1883</default>
-                <required>true</required>
-            </parameter>
-            <parameter name="user" type="text">
-                <context>username</context>
-                <label>User name</label>
-                <description>User name for connecting to the MQTT server.</description>
-                <required>false</required>
-            </parameter>            
-            <parameter name="pwd" type="text">
-                <context>password</context>
-                <label>Password</label>
-                <description>Password for connecting to the MQTT server</description>
-                <required>false</required>
-            </parameter>           
-             <parameter name="clientId" type="text">
-                <label>Client ID</label>
-                <description>Client ID for connecting to the MQTT server.</description>
-                <required>false</required>
-            </parameter>           
-        </config-description>
-        
-    </bridge-type>
+		<config-description>
+
+			<parameter-group name="broker">
+				<label>Broker Configuration</label>
+				<description>MQTT Broker Configuration</description>
+				<advanced>false</advanced>
+			</parameter-group>
+			<parameter-group name="discovery">
+				<label>Discovery</label>
+				<description>Discovery Configuration</description>
+				<advanced>false</advanced>
+			</parameter-group>
+
+			<parameter name="url" type="text" groupName="broker">
+				<context>url</context>
+				<label>URL</label>
+				<description>URL of the MQTT server.</description>
+				<default>tcp://localhost:1883</default>
+				<required>true</required>
+			</parameter>
+			<parameter name="user" type="text" groupName="broker">
+				<context>username</context>
+				<label>User name</label>
+				<description>User name for connecting to the MQTT server.</description>
+				<required>false</required>
+			</parameter>
+			<parameter name="pwd" type="text" groupName="broker">
+				<context>password</context>
+				<label>Password</label>
+				<description>Password for connecting to the MQTT server</description>
+				<required>false</required>
+			</parameter>
+			<parameter name="clientId" type="text" groupName="broker">
+				<label>Client ID</label>
+				<description>Client ID for connecting to the MQTT server.</description>
+				<required>false</required>
+			</parameter>
+			<parameter name="qos" type="text" groupName="broker">
+				<label>Quality of Service</label>
+				<description>Set the quality of service level for sending messages to this broker.</description>
+				<options>
+					<option value="0">0 (Deliver at most once)</option>
+					<option value="1">1 (Deliver at least once)</option>
+					<option value="2">2 (Deliver exactly once)</option>
+				</options>
+				<default>0</default>
+				<advanced>true</advanced>
+				<required>false</required>
+			</parameter>
+			<parameter name="retain" type="boolean" groupName="broker">
+				<label>Retain</label>
+				<description>Defines if the broker should retain the messages sent to it.</description>
+				<default>false</default>
+				<advanced>true</advanced>
+				<required>false</required>
+			</parameter>
+			<parameter name="async" type="boolean" groupName="broker">
+				<label>async</label>
+				<description>Defines if messages are published asynchronously or synchronously.</description>
+				<default>true</default>
+				<advanced>true</advanced>
+				<required>false</required>
+			</parameter>
+
+			<parameter name="discoveryTopic" type="text" groupName="discovery">
+				<label>Discovery Topic</label>
+				<description>Root topic used for automatic discovery.</description>
+				<default>#</default>
+				<required>false</required>
+				<advanced>true</advanced>
+			</parameter>
+			<parameter name="discoveryMode" type="text" groupName="discovery">
+				<label>Discover multi-topic things</label>
+				<description>Discover single or multiple topics per thing.</description>
+				<options>
+					<option value="MULTIPLE">Multi Topic Things</option>
+					<option value="SINGLE">Single Topic Things</option>
+				</options>
+				<default>MULTIPLE</default>
+				<required>false</required>
+				<advanced>true</advanced>
+			</parameter>
+		</config-description>
+
+	</bridge-type>
 
 
 </thing:thing-descriptions>
