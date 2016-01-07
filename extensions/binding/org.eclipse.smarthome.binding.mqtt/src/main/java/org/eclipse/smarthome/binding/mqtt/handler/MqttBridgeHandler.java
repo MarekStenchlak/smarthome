@@ -4,8 +4,10 @@ import static org.eclipse.smarthome.binding.mqtt.MqttBindingConstants.*;
 
 import java.util.Collections;
 import java.util.Dictionary;
+import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -17,12 +19,14 @@ import org.eclipse.smarthome.core.thing.ChannelUID;
 import org.eclipse.smarthome.core.thing.Thing;
 import org.eclipse.smarthome.core.thing.ThingStatus;
 import org.eclipse.smarthome.core.thing.ThingTypeUID;
+import org.eclipse.smarthome.core.thing.ThingUID;
 import org.eclipse.smarthome.core.thing.binding.BaseBridgeHandler;
 import org.eclipse.smarthome.core.thing.binding.ThingHandler;
 import org.eclipse.smarthome.core.types.Command;
 import org.eclipse.smarthome.io.transport.mqtt.MqttConnectionObserver;
 import org.eclipse.smarthome.io.transport.mqtt.MqttService;
 import org.osgi.framework.ServiceReference;
+import org.osgi.framework.ServiceRegistration;
 import org.osgi.service.cm.Configuration;
 import org.osgi.service.cm.ConfigurationAdmin;
 import org.slf4j.Logger;
@@ -37,6 +41,8 @@ public class MqttBridgeHandler extends BaseBridgeHandler implements MqttConnecti
 
     public final static Set<ThingTypeUID> SUPPORTED_THING_TYPES = Collections.singleton(THING_TYPE_BRIDGE);
 
+    private Map<ThingUID, ServiceRegistration<?>> discoveryServiceRegs = new HashMap<>();
+
     private Logger logger = LoggerFactory.getLogger(MqttBridgeHandler.class);
 
     private List<MqttBridgeListener> mqttBridgeListeners = new CopyOnWriteArrayList<>();
@@ -50,6 +56,12 @@ public class MqttBridgeHandler extends BaseBridgeHandler implements MqttConnecti
 
     public MqttBridgeHandler(Bridge mqttBridge) {
         super(mqttBridge);
+    }
+
+    @Override
+    public void thingUpdated(Thing thing) {
+        unregisterConnectionObserver(broker, this);
+        initialize();
     }
 
     /**
@@ -176,6 +188,15 @@ public class MqttBridgeHandler extends BaseBridgeHandler implements MqttConnecti
                 } else {
                     properties.put(broker + "." + CLIENTID, getThing().getUID().getId());
                 }
+                if (getConfig().get(QOS) != null) {
+                    properties.put(broker + "." + QOS, getConfig().get(QOS));
+                }
+                if (getConfig().get(RETAIN) != null) {
+                    properties.put(broker + "." + RETAIN, getConfig().get(RETAIN).toString());
+                }
+                if (getConfig().get(ASYNC) != null) {
+                    properties.put(broker + "." + ASYNC, getConfig().get(ASYNC).toString());
+                }
 
                 logger.debug("Initiate for broker {}", broker);
                 // mqttServiceConf.update(properties); // FIXME! Updating properties like this via Configuration
@@ -191,8 +212,27 @@ public class MqttBridgeHandler extends BaseBridgeHandler implements MqttConnecti
             logger.error("Failed to get MQTT service!");
         }
         initializeTopics();
+        initializeDiscoveryTopics();
+
         registerConnectionObserver(broker, this);
         // registerMqttDiscoveryService(mqttService, broker);
+        // registerMqttDiscoveryService(this, getThing());
+    }
+
+    private void initializeDiscoveryTopics() {
+        String discoveryTopic = null;
+        String discoveryMode = null;
+        if (getConfig().get(DISCOVERYTOPIC) != null && !((String) getConfig().get(DISCOVERYTOPIC)).isEmpty()) {
+            discoveryTopic = (String) getConfig().get(DISCOVERYTOPIC);
+        }
+        if (getConfig().get(DISCOVERYMODE) != null && !((String) getConfig().get(DISCOVERYMODE)).isEmpty()) {
+            discoveryMode = (String) getConfig().get(DISCOVERYMODE);
+        }
+
+        for (MqttBridgeListener mqttBridgeListener : mqttBridgeListeners) {
+            mqttBridgeListener.discoveryConfigUpdate(discoveryTopic, discoveryMode);
+        }
+
     }
 
     /***
@@ -202,6 +242,7 @@ public class MqttBridgeHandler extends BaseBridgeHandler implements MqttConnecti
     public void dispose() {
         logger.debug("Mqtt Handler disposed.");
         // discoveryService.deactivate();
+        // unregisterMqttDiscoveryService(this);
         super.dispose();
     }
 
@@ -223,6 +264,24 @@ public class MqttBridgeHandler extends BaseBridgeHandler implements MqttConnecti
         return result;
     }
 
+    /***
+     * Called by a Topic handler to register itself to the bridge in order to get events.
+     * Currently no events are being sent/implemented.
+     *
+     * @param mqttBridgeListener Topic handler to be registered
+     * @return true if success
+     */
+    public boolean unRegisterMqttBridgeListener(MqttBridgeListener mqttBridgeListener) {
+        if (mqttBridgeListener == null) {
+            throw new NullPointerException("It's not allowed to pass a null mqttBridgeListener.");
+        }
+        boolean result = mqttBridgeListeners.remove(mqttBridgeListener);
+        if (result) {
+            // no action needed yet
+        }
+        return result;
+    }
+
     @Override
     public void setConnected(boolean connected) {
         if (connected) {
@@ -233,9 +292,33 @@ public class MqttBridgeHandler extends BaseBridgeHandler implements MqttConnecti
 
     }
 
-    private void registerMqttDiscoveryService(MqttService mqttService, String brokerName) {
-        // TODO: choose discovery method 1 or 2
-        discoveryService = new MqttDiscoveryService2(mqttService, brokerName);
-        discoveryService.activate();
-    }
+    // private void registerMqttDiscoveryService(MqttService mqttService, String brokerName) {
+    // // TODO: choose discovery method 1 or 2
+    // discoveryService = new MqttDiscoveryService2(mqttService, brokerName);
+    // discoveryService.activate();
+    // }
+
+    // /**
+    // * @param MqttBridgeHandler
+    // */
+    //
+    // private void unregisterMqttDiscoveryService(MqttBridgeHandler MqttBridgeHandler) {
+    // ServiceRegistration<?> serviceReg = this.discoveryServiceRegs.get(MqttBridgeHandler.getThing().getUID());
+    // if (serviceReg != null) {
+    // // remove discovery service, if bridge handler is removed
+    // MqttDiscoveryService service = (MqttDiscoveryService) bundleContext.getService(serviceReg.getReference());
+    // service.deactivate();
+    // serviceReg.unregister();
+    // discoveryServiceRegs.remove(MqttBridgeHandler.getThing().getUID());
+    // }
+    // }
+    //
+    // private void registerMqttDiscoveryService(MqttBridgeHandler MqttBridgeHandler, Thing thing) {
+    // MqttDiscoveryService discoveryService = new MqttDiscoveryService(MqttBridgeHandler, thing);
+    // discoveryService.activate();
+    //
+    // this.discoveryServiceRegs.put(((ThingHandler) MqttBridgeHandler).getThing().getUID(), bundleContext
+    // .registerService(DiscoveryService.class.getName(), discoveryService, new Hashtable<String, Object>()));
+    // }
+
 }

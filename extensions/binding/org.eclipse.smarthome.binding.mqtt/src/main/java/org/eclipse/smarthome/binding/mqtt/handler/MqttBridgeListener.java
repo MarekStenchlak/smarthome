@@ -7,6 +7,12 @@ package org.eclipse.smarthome.binding.mqtt.handler;
  */
 public interface MqttBridgeListener {
 
-    // Stub interface for future use
+    /***
+     * Received an discovery parameter update from the bridge
+     *
+     * @param discoveryTopic
+     * @param discoveryMode
+     */
+    public abstract void discoveryConfigUpdate(String discoveryTopic, String discoveryMode);
 
 }

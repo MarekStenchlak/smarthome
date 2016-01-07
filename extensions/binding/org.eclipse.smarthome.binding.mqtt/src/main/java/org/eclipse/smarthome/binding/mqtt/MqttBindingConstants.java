@@ -41,6 +41,11 @@ public class MqttBindingConstants {
     public final static String USER = "user";
     public final static String PWD = "pwd";
     public final static String CLIENTID = "clientId";
+    public final static String QOS = "qos";
+    public final static String RETAIN = "retain";
+    public final static String ASYNC = "async";
+    public final static String DISCOVERYTOPIC = "discoveryTopic";
+    public final static String DISCOVERYMODE = "discoveryMode";
 
     // Topic properties
     public final static String TOPIC_ID = "topicId";

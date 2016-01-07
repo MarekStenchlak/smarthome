@@ -519,4 +519,10 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
         c[0] = Character.toUpperCase(c[0]);
         return new String(c);
     }
+
+    @Override
+    public void discoveryConfigUpdate(String discoveryTopic, String discoveryMode) {
+        // ignore
+
+    }
 }
