@@ -93,6 +93,8 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
     /** Message consumer for receiving state messages from MQTT **/
     private MqttMessageSubscriber subscriber;
 
+    private boolean linkMessage = false;
+
     public MqttHandler(Thing thing) {
         super(thing);
     }
@@ -137,6 +139,10 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
                 }
             }
         }
+        if (!linkMessage) {
+            channelEnableMessage();
+            linkMessage = true;
+        }
     }
 
     /***
@@ -152,7 +158,7 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
         logger.trace("MQTT: Received state (topic '{}' payload '{}')", topic, state);
 
         String channelTopicId = makeTopicString(topic);
-        testNewTopic(topic, channelTopicId);
+        newChannelfromTopic(topic, channelTopicId);
 
         // new alternative code based for dynamic topic channels
         for (Channel channel : getThing().getChannels()) {
@@ -212,6 +218,10 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
             }
 
         }
+        if (!linkMessage) {
+            channelEnableMessage();
+            linkMessage = true;
+        }
     }
 
     /***
@@ -220,7 +230,7 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
      * @param channelTopicId MQTT topic of the received message
      *            channelTopicId
      */
-    private synchronized void testNewTopic(String topic, String channelTopicId) {
+    private synchronized void newChannelfromTopic(String topic, String channelTopicId) {
 
         if (!channelTopics.contains(topic)) {
 
@@ -246,6 +256,7 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
                 channelTopics.add(topic);
                 logger.info("to enable, enter in console: smarthome setup enableChannel {}",
                         channel.getUID().getAsString());
+                channelEnableMessage();
 
             } else {
                 logger.info("Channel for topic '{}' for thing {} already exist", channelTopicId, getThing().getUID());
@@ -389,7 +400,24 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
             updateStatus(ThingStatus.ONLINE);
         }
         logger.debug("MQTT topic {} handler initialized.", topicId);
+    }
 
+    // TODO: remove when dynamic channels are better supported in UI
+    /**
+     *
+     */
+    private void channelEnableMessage() {
+        String channelEnableString = "";
+        for (Channel channel : getThing().getChannels()) {
+            if (!channel.isLinked()) {
+                channelEnableString = channelEnableString + "smarthome setup enableChannel ";
+                channelEnableString = channelEnableString + channel.getUID().getAsString() + "\n";
+            }
+        }
+
+        if (!channelEnableString.isEmpty()) {
+            logger.info("Dynamic channels are not visible in UI, use command line to enable \n{}", channelEnableString);
+        }
     }
 
     /***
