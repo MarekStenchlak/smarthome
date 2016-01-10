@@ -376,7 +376,15 @@ public class MqttBrokerConnection implements MqttCallback {
 
         options.setKeepAliveInterval(keepAliveInterval);
 
-        client.connect(options);
+        try {
+            client.connect(options);
+        } catch (Exception e) {
+            if (started) {
+                setStarted(false);
+            }
+            throw e;
+        }
+
     }
 
     /**

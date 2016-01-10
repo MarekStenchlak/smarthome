@@ -40,7 +40,7 @@ public class MqttBrokerConnectionHelper extends TimerTask {
 
             // reconnect failed,
             // maybe we will have more luck next time...
-            logger.info("Connection lost for broker '{}':", connection.getName().toString(), e);
+            logger.info("Connection lost for broker '{}':", connection.getName().toString(), e.getMessage());
         }
     }
 
