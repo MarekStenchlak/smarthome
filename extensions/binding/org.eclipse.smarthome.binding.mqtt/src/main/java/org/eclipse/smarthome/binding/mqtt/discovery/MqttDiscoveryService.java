@@ -217,4 +217,10 @@ public class MqttDiscoveryService extends AbstractDiscoveryService
         subscribe();
     }
 
+    @Override
+    public void setConnected(boolean connected) {
+        // ignore
+
+    }
+
 }

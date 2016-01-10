@@ -15,4 +15,6 @@ public interface MqttBridgeListener {
      */
     public abstract void discoveryConfigUpdate(String discoveryTopic, String discoveryMode);
 
+    public abstract void setConnected(boolean connected);
+
 }

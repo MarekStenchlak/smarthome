@@ -95,8 +95,119 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
 
     private boolean linkMessage = false;
 
+    private boolean initialized = false;
+
+    /***
+     * Called by framework when this Topic handler is initialized
+     */
+    @Override
+    public void initialize() {
+        logger.debug("Initializing MQTT topic handler.");
+        final String topicId = (String) getConfig().get(TOPIC_ID);
+        final String type = (String) getConfig().get(TYPE);
+
+        String transform = null;
+        try {
+            transform = (String) getConfig().get(TRANSFORM);
+        } catch (Exception e) {
+            //
+        }
+
+        if (topicId != null) {
+            if (type != null) {
+                if (getBridgeHandler() != null) {
+                    if (getConfig().get(DIRECTION) != null) {
+                        if (getConfig().get(DIRECTION).equals("in")) {
+                            setupSubscriber(topicId, type, transform);
+                        } else if (getConfig().get(DIRECTION).equals("out")) {
+                            setupPublisher(topicId, type, transform);
+                        } else if (getConfig().get(DIRECTION).equals("both")) {
+                            setupSubscriber(topicId, type, transform);
+                            setupPublisher(topicId, type, transform);
+                        } else {
+                            throw new IllegalArgumentException("MQTT direction invalid!");
+                        }
+                    } else {
+                        throw new IllegalArgumentException("MQTT direction must be defined!");
+                    }
+                }
+            } else {
+                throw new IllegalArgumentException("MQTT type must be defined!");
+            }
+        } else {
+            throw new IllegalArgumentException("MQTT topic must be defined!");
+        }
+
+        stateList.add(OnOffType.class);
+        stateList.add(OpenClosedType.class);
+        stateList.add(UpDownType.class);
+        stateList.add(HSBType.class);
+        stateList.add(PercentType.class);
+        stateList.add(DecimalType.class);
+        stateList.add(DateTimeType.class);
+        stateList.add(StringType.class);
+
+        commandList.add(OnOffType.class);
+        commandList.add(OpenClosedType.class);
+        commandList.add(UpDownType.class);
+        commandList.add(IncreaseDecreaseType.class);
+        commandList.add(StopMoveType.class);
+        commandList.add(HSBType.class);
+        commandList.add(PercentType.class);
+        commandList.add(DecimalType.class);
+        commandList.add(StringType.class);
+
+        itemList.put(CHANNEL_CONTACT, new ContactItem(""));
+        itemList.put(CHANNEL_DATETIME, new DateTimeItem(""));
+        itemList.put(CHANNEL_DIMMER, new DimmerItem(""));
+        itemList.put(CHANNEL_NUMBER, new NumberItem(""));
+        itemList.put(CHANNEL_ROLLERSHUTTER, new RollershutterItem(""));
+        itemList.put(CHANNEL_STRING, new StringItem(""));
+        itemList.put(CHANNEL_SWITCH, new SwitchItem(""));
+        itemList.put(CHANNEL_COLOR, new ColorItem(""));
+
+        if (getBridgeHandler() != null) {
+            updateStatus(ThingStatus.ONLINE);
+            initialized = true;
+        }
+        logger.debug("MQTT topic {} handler initialized.", topicId);
+    }
+
+    /***
+     * Callback from framework when this Topic handler is deleted
+     */
+    @Override
+    public void preDispose() {
+        logger.debug("Disposing MQTT topic handler.");
+        if (publisher != null) {
+            getBridgeHandler().unRegisterMessageProducer(publisher);
+        }
+        if (subscriber != null) {
+            getBridgeHandler().unRegisterMessageConsumer(subscriber);
+        }
+        super.preDispose();
+
+    }
+
     public MqttHandler(Thing thing) {
         super(thing);
+    }
+
+    /**
+     * Handles a command for a given channel.
+     *
+     * @param channelUID unique identifier of the channel on which the update was performed
+     * @param command new command
+     */
+    @Override
+    public void handleCommand(ChannelUID channelUID, Command command) {
+        if (publisher != null) {
+            String cmdstr = command.toString();
+            logger.debug("MQTT: send command '{}' as topic '{}'", cmdstr, publisher.getTopic());
+            publisher.publish(publisher.getTopic(), cmdstr.getBytes());
+        } else {
+            logger.warn("MQTT: handleCommand invoked on topic '{}' but declared 'input'! Ignoring..");
+        }
     }
 
     /***
@@ -173,7 +284,7 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
                         String channelz = channel.getUID().getId();
 
                         // state could be casted to type 'type'
-                        logger.info(
+                        logger.trace(
                                 "MQTT: Received state ( topic '{}'). Propagating payload '{}' to dynamic channel '{}' as type '{}')",
                                 topic, state, channelz, s.getClass().getName());
 
@@ -203,7 +314,7 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
 
                         if (s != null) {
                             // state could be casted to type 'type'
-                            logger.info(
+                            logger.trace(
                                     "MQTT: Received state (topic '{}'). Propagating payload '{}' to channel '{}' as type '{}')",
                                     topic, state, channelName, s.getClass().getName());
                             updateState(channelName, s);
@@ -327,81 +438,6 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
 
     }
 
-    /***
-     * Called by framework when this Topic handler is initialized
-     */
-    @Override
-    public void initialize() {
-        logger.debug("Initializing MQTT topic handler.");
-        final String topicId = (String) getConfig().get(TOPIC_ID);
-        final String type = (String) getConfig().get(TYPE);
-
-        String transform = null;
-        try {
-            transform = (String) getConfig().get(TRANSFORM);
-        } catch (Exception e) {
-            //
-        }
-
-        if (topicId != null) {
-            if (type != null) {
-                if (getBridgeHandler() != null) {
-                    if (getConfig().get(DIRECTION) != null) {
-                        if (getConfig().get(DIRECTION).equals("in")) {
-                            setupSubscriber(topicId, type, transform);
-                        } else if (getConfig().get(DIRECTION).equals("out")) {
-                            setupPublisher(topicId, type, transform);
-                        } else if (getConfig().get(DIRECTION).equals("both")) {
-                            setupSubscriber(topicId, type, transform);
-                            setupPublisher(topicId, type, transform);
-                        } else {
-                            throw new IllegalArgumentException("MQTT direction invalid!");
-                        }
-                    } else {
-                        throw new IllegalArgumentException("MQTT direction must be defined!");
-                    }
-                }
-            } else {
-                throw new IllegalArgumentException("MQTT type must be defined!");
-            }
-        } else {
-            throw new IllegalArgumentException("MQTT topic must be defined!");
-        }
-
-        stateList.add(OnOffType.class);
-        stateList.add(OpenClosedType.class);
-        stateList.add(UpDownType.class);
-        stateList.add(HSBType.class);
-        stateList.add(PercentType.class);
-        stateList.add(DecimalType.class);
-        stateList.add(DateTimeType.class);
-        stateList.add(StringType.class);
-
-        commandList.add(OnOffType.class);
-        commandList.add(OpenClosedType.class);
-        commandList.add(UpDownType.class);
-        commandList.add(IncreaseDecreaseType.class);
-        commandList.add(StopMoveType.class);
-        commandList.add(HSBType.class);
-        commandList.add(PercentType.class);
-        commandList.add(DecimalType.class);
-        commandList.add(StringType.class);
-
-        itemList.put(CHANNEL_CONTACT, new ContactItem(""));
-        itemList.put(CHANNEL_DATETIME, new DateTimeItem(""));
-        itemList.put(CHANNEL_DIMMER, new DimmerItem(""));
-        itemList.put(CHANNEL_NUMBER, new NumberItem(""));
-        itemList.put(CHANNEL_ROLLERSHUTTER, new RollershutterItem(""));
-        itemList.put(CHANNEL_STRING, new StringItem(""));
-        itemList.put(CHANNEL_SWITCH, new SwitchItem(""));
-        itemList.put(CHANNEL_COLOR, new ColorItem(""));
-
-        if (getBridgeHandler() != null) {
-            updateStatus(ThingStatus.ONLINE);
-        }
-        logger.debug("MQTT topic {} handler initialized.", topicId);
-    }
-
     // TODO: remove when dynamic channels are better supported in UI
     /**
      *
@@ -417,39 +453,6 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
 
         if (!channelEnableString.isEmpty()) {
             logger.info("Dynamic channels are not visible in UI, use command line to enable \n{}", channelEnableString);
-        }
-    }
-
-    /***
-     * Callback from framework when this Topic handler is deleted
-     */
-    @Override
-    public void preDispose() {
-        logger.debug("Disposing MQTT topic handler.");
-        if (publisher != null) {
-            getBridgeHandler().unRegisterMessageProducer(publisher);
-        }
-        if (subscriber != null) {
-            getBridgeHandler().unRegisterMessageConsumer(subscriber);
-        }
-        super.preDispose();
-
-    }
-
-    /**
-     * Handles a command for a given channel.
-     *
-     * @param channelUID unique identifier of the channel on which the update was performed
-     * @param command new command
-     */
-    @Override
-    public void handleCommand(ChannelUID channelUID, Command command) {
-        if (publisher != null) {
-            String cmdstr = command.toString();
-            logger.debug("MQTT: send command '{}' as topic '{}'", cmdstr, publisher.getTopic());
-            publisher.publish(publisher.getTopic(), cmdstr.getBytes());
-        } else {
-            logger.warn("MQTT: handleCommand invoked on topic '{}' but declared 'input'! Ignoring..");
         }
     }
 
@@ -551,6 +554,14 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
     @Override
     public void discoveryConfigUpdate(String discoveryTopic, String discoveryMode) {
         // ignore
+
+    }
+
+    @Override
+    public void setConnected(boolean connected) {
+        if (connected && initialized) {
+            updateStatus(ThingStatus.ONLINE);
+        }
 
     }
 }
