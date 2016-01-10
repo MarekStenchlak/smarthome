@@ -15,6 +15,11 @@ public interface MqttBridgeListener {
      */
     public abstract void discoveryConfigUpdate(String discoveryTopic, String discoveryMode);
 
+    /***
+     * Received when the bridge goes online or offline
+     *
+     * @param connected
+     */
     public abstract void setConnected(boolean connected);
 
 }

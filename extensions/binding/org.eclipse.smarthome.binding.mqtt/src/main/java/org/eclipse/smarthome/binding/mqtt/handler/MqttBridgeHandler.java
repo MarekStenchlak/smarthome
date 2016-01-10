@@ -230,7 +230,11 @@ public class MqttBridgeHandler extends BaseBridgeHandler implements MqttConnecti
         }
 
         for (MqttBridgeListener mqttBridgeListener : mqttBridgeListeners) {
-            mqttBridgeListener.discoveryConfigUpdate(discoveryTopic, discoveryMode);
+            try {
+                mqttBridgeListener.discoveryConfigUpdate(discoveryTopic, discoveryMode);
+            } catch (Exception e) {
+                logger.error("mqttBridgeListener unavailable error: {}", e.getMessage());
+            }
         }
 
     }
@@ -290,6 +294,13 @@ public class MqttBridgeHandler extends BaseBridgeHandler implements MqttConnecti
             updateStatus(ThingStatus.OFFLINE);
         }
 
+        for (MqttBridgeListener mqttBridgeListener : mqttBridgeListeners) {
+            try {
+                mqttBridgeListener.setConnected(connected);
+            } catch (Exception e) {
+                logger.error("mqttBridgeListener unavailable error: {}", e.getMessage());
+            }
+        }
     }
 
     // private void registerMqttDiscoveryService(MqttService mqttService, String brokerName) {
