@@ -56,13 +56,13 @@
                 </description>
 				<default>default</default>
 			</parameter>
-        <parameter name="createChannels" type="boolean" required="false">
-                <label>Channel Creation</label>
-                <description>Create new channels for received topics
+			<parameter name="createChannels" type="boolean" required="false">
+				<label>Channel Creation</label>
+				<description>Create new channels for received topics
                 </description>
-                <default>true</default>
-            </parameter>
-            
+				<default>true</default>
+			</parameter>
+
 		</config-description>
 
 	</thing-type>
@@ -71,7 +71,7 @@
 		<item-type>Number</item-type>
 		<label>Number type MQTT payload</label>
 		<description>Channel for mapping Number types to MQTT messages</description>
-	
+		<state pattern="%.1f"></state>
 		<config-description>
 			<parameter name="topicId" type="text" required="true">
 				<label>MQTT Topic</label>
@@ -85,15 +85,15 @@
 				<options>
 					<option value="ContactItem">ContactItem</option>
 					<option value="DateTimeItem">DateTimeItem</option>
-                    <option value="DimmerItem">DimmerItem</option>
-                    <option value="NumberItem">NumberItem</option>
-                    <option value="RollershutterItem">RollershutterItem</option>
-                    <option value="StringItem">StringItem</option>                    
-                    <option value="SwitchItem">SwitchItem</option>
-                    <option value="ColorItem">ColorItem</option>
-                    <option value="LocationItem">LocationItem</option>
-                    <option value="PlayerItem">PlayerItem</option>
-                    <option value="ImageItem">ImageItem</option>
+					<option value="DimmerItem">DimmerItem</option>
+					<option value="NumberItem">NumberItem</option>
+					<option value="RollershutterItem">RollershutterItem</option>
+					<option value="StringItem">StringItem</option>
+					<option value="SwitchItem">SwitchItem</option>
+					<option value="ColorItem">ColorItem</option>
+					<option value="LocationItem">LocationItem</option>
+					<option value="PlayerItem">PlayerItem</option>
+					<option value="ImageItem">ImageItem</option>
 				</options>
 				<default>StringItem</default>
 			</parameter>
@@ -105,65 +105,67 @@
 		<item-type>Switch</item-type>
 		<label>Switch type MQTT payload</label>
 		<description>Channel for mapping Switch types to MQTT messages</description>
-		  <config-description>
-            <parameter name="topicId" type="text" required="true">
-                <label>MQTT Topic</label>
-                <description>MQTT topic for this channel
+		<state pattern="%s"></state>
+		<config-description>
+			<parameter name="topicId" type="text" required="true">
+				<label>MQTT Topic</label>
+				<description>MQTT topic for this channel
                 </description>
-            </parameter>
-            <parameter name="itemtype" type="text" required="true">
-                <label>Item Type</label>
-                <description>Controls to what item types the data is mapped.
+			</parameter>
+			<parameter name="itemtype" type="text" required="true">
+				<label>Item Type</label>
+				<description>Controls to what item types the data is mapped.
                 </description>
-                <options>
-                    <option value="ContactItem">ContactItem</option>
-                    <option value="DateTimeItem">DateTimeItem</option>
-                    <option value="DimmerItem">DimmerItem</option>
-                    <option value="NumberItem">NumberItem</option>
-                    <option value="RollershutterItem">RollershutterItem</option>
-                    <option value="StringItem">StringItem</option>                    
-                    <option value="SwitchItem">SwitchItem</option>
-                    <option value="ColorItem">ColorItem</option>
-                    <option value="LocationItem">LocationItem</option>
-                    <option value="PlayerItem">PlayerItem</option>
-                    <option value="ImageItem">ImageItem</option>
-                </options>
-                <default>StringItem</default>
-            </parameter>
-        </config-description>
-		
+				<options>
+					<option value="ContactItem">ContactItem</option>
+					<option value="DateTimeItem">DateTimeItem</option>
+					<option value="DimmerItem">DimmerItem</option>
+					<option value="NumberItem">NumberItem</option>
+					<option value="RollershutterItem">RollershutterItem</option>
+					<option value="StringItem">StringItem</option>
+					<option value="SwitchItem">SwitchItem</option>
+					<option value="ColorItem">ColorItem</option>
+					<option value="LocationItem">LocationItem</option>
+					<option value="PlayerItem">PlayerItem</option>
+					<option value="ImageItem">ImageItem</option>
+				</options>
+				<default>StringItem</default>
+			</parameter>
+		</config-description>
+
 	</channel-type>
 
 	<channel-type id="color-channel">
 		<item-type>Color</item-type>
 		<label>Color type MQTT payload</label>
 		<description>Channel for mapping Color types to MQTT messages</description>
-    <config-description>
-            <parameter name="topicId" type="text" required="true">
-                <label>MQTT Topic</label>
-                <description>MQTT topic for this channel
+
+		<config-description>
+			<parameter name="topicId" type="text" required="true">
+				<label>MQTT Topic</label>
+				<description>MQTT topic for this channel
                 </description>
-            </parameter>
-            <parameter name="itemtype" type="text" required="true">
-                <label>Item Type</label>
-                <description>Controls to what item types the data is mapped.
+			</parameter>
+			<parameter name="itemtype" type="text" required="true">
+				<label>Item Type</label>
+				<description>Controls to what item types the data is mapped.
                 </description>
-                <options>
-                    <option value="ContactItem">ContactItem</option>
-                    <option value="DateTimeItem">DateTimeItem</option>
-                    <option value="DimmerItem">DimmerItem</option>
-                    <option value="NumberItem">NumberItem</option>
-                    <option value="RollershutterItem">RollershutterItem</option>
-                    <option value="StringItem">StringItem</option>                    
-                    <option value="SwitchItem">SwitchItem</option>
-                    <option value="ColorItem">ColorItem</option>
-                    <option value="LocationItem">LocationItem</option>
-                    <option value="PlayerItem">PlayerItem</option>
-                    <option value="ImageItem">ImageItem</option>
-                </options>
-                <default>StringItem</default>
-            </parameter>
-        </config-description>
+				<options>
+					<option value="ContactItem">ContactItem</option>
+					<option value="DateTimeItem">DateTimeItem</option>
+					<option value="DimmerItem">DimmerItem</option>
+					<option value="NumberItem">NumberItem</option>
+					<option value="RollershutterItem">RollershutterItem</option>
+					<option value="StringItem">StringItem</option>
+					<option value="SwitchItem">SwitchItem</option>
+					<option value="ColorItem">ColorItem</option>
+					<option value="LocationItem">LocationItem</option>
+					<option value="PlayerItem">PlayerItem</option>
+					<option value="ImageItem">ImageItem</option>
+				</options>
+				<default>StringItem</default>
+			</parameter>
+		</config-description>
 
 	</channel-type>
 
@@ -171,32 +173,33 @@
 		<item-type>Contact</item-type>
 		<label>Contact type MQTT payload</label>
 		<description>Channel for mapping Contact types (OPEN/CLOSED) to MQTT messages</description>
-    <config-description>
-            <parameter name="topicId" type="text" required="true">
-                <label>MQTT Topic</label>
-                <description>MQTT topic for this channel
+		<state pattern="%s"></state>
+		<config-description>
+			<parameter name="topicId" type="text" required="true">
+				<label>MQTT Topic</label>
+				<description>MQTT topic for this channel
                 </description>
-            </parameter>
-            <parameter name="itemtype" type="text" required="true">
-                <label>Item Type</label>
-                <description>Controls to what item types the data is mapped.
+			</parameter>
+			<parameter name="itemtype" type="text" required="true">
+				<label>Item Type</label>
+				<description>Controls to what item types the data is mapped.
                 </description>
-                <options>
-                    <option value="ContactItem">ContactItem</option>
-                    <option value="DateTimeItem">DateTimeItem</option>
-                    <option value="DimmerItem">DimmerItem</option>
-                    <option value="NumberItem">NumberItem</option>
-                    <option value="RollershutterItem">RollershutterItem</option>
-                    <option value="StringItem">StringItem</option>                    
-                    <option value="SwitchItem">SwitchItem</option>
-                    <option value="ColorItem">ColorItem</option>
-                    <option value="LocationItem">LocationItem</option>
-                    <option value="PlayerItem">PlayerItem</option>
-                    <option value="ImageItem">ImageItem</option>
-                </options>
-                <default>StringItem</default>
-            </parameter>
-        </config-description>
+				<options>
+					<option value="ContactItem">ContactItem</option>
+					<option value="DateTimeItem">DateTimeItem</option>
+					<option value="DimmerItem">DimmerItem</option>
+					<option value="NumberItem">NumberItem</option>
+					<option value="RollershutterItem">RollershutterItem</option>
+					<option value="StringItem">StringItem</option>
+					<option value="SwitchItem">SwitchItem</option>
+					<option value="ColorItem">ColorItem</option>
+					<option value="LocationItem">LocationItem</option>
+					<option value="PlayerItem">PlayerItem</option>
+					<option value="ImageItem">ImageItem</option>
+				</options>
+				<default>StringItem</default>
+			</parameter>
+		</config-description>
 
 	</channel-type>
 
@@ -204,32 +207,32 @@
 		<item-type>DateTime</item-type>
 		<label>DateTime type MQTT payload</label>
 		<description>Channel for mapping Datetime types to MQTT messages</description>
-    <config-description>
-            <parameter name="topicId" type="text" required="true">
-                <label>MQTT Topic</label>
-                <description>MQTT topic for this channel
+		<config-description>
+			<parameter name="topicId" type="text" required="true">
+				<label>MQTT Topic</label>
+				<description>MQTT topic for this channel
                 </description>
-            </parameter>
-            <parameter name="itemtype" type="text" required="true">
-                <label>Item Type</label>
-                <description>Controls to what item types the data is mapped.
+			</parameter>
+			<parameter name="itemtype" type="text" required="true">
+				<label>Item Type</label>
+				<description>Controls to what item types the data is mapped.
                 </description>
-                <options>
-                    <option value="ContactItem">ContactItem</option>
-                    <option value="DateTimeItem">DateTimeItem</option>
-                    <option value="DimmerItem">DimmerItem</option>
-                    <option value="NumberItem">NumberItem</option>
-                    <option value="RollershutterItem">RollershutterItem</option>
-                    <option value="StringItem">StringItem</option>                    
-                    <option value="SwitchItem">SwitchItem</option>
-                    <option value="ColorItem">ColorItem</option>
-                    <option value="LocationItem">LocationItem</option>
-                    <option value="PlayerItem">PlayerItem</option>
-                    <option value="ImageItem">ImageItem</option>
-                </options>
-                <default>StringItem</default>
-            </parameter>
-        </config-description>
+				<options>
+					<option value="ContactItem">ContactItem</option>
+					<option value="DateTimeItem">DateTimeItem</option>
+					<option value="DimmerItem">DimmerItem</option>
+					<option value="NumberItem">NumberItem</option>
+					<option value="RollershutterItem">RollershutterItem</option>
+					<option value="StringItem">StringItem</option>
+					<option value="SwitchItem">SwitchItem</option>
+					<option value="ColorItem">ColorItem</option>
+					<option value="LocationItem">LocationItem</option>
+					<option value="PlayerItem">PlayerItem</option>
+					<option value="ImageItem">ImageItem</option>
+				</options>
+				<default>StringItem</default>
+			</parameter>
+		</config-description>
 
 	</channel-type>
 
@@ -237,32 +240,32 @@
 		<item-type>Rollershutter</item-type>
 		<label>Rollershutter type MQTT payload</label>
 		<description>Channel for mapping Rollershutter types to MQTT messages</description>
-    <config-description>
-            <parameter name="topicId" type="text" required="true">
-                <label>MQTT Topic</label>
-                <description>MQTT topic for this channel
+		<config-description>
+			<parameter name="topicId" type="text" required="true">
+				<label>MQTT Topic</label>
+				<description>MQTT topic for this channel
                 </description>
-            </parameter>
-            <parameter name="itemtype" type="text" required="true">
-                <label>Item Type</label>
-                <description>Controls to what item types the data is mapped.
+			</parameter>
+			<parameter name="itemtype" type="text" required="true">
+				<label>Item Type</label>
+				<description>Controls to what item types the data is mapped.
                 </description>
-                <options>
-                    <option value="ContactItem">ContactItem</option>
-                    <option value="DateTimeItem">DateTimeItem</option>
-                    <option value="DimmerItem">DimmerItem</option>
-                    <option value="NumberItem">NumberItem</option>
-                    <option value="RollershutterItem">RollershutterItem</option>
-                    <option value="StringItem">StringItem</option>                    
-                    <option value="SwitchItem">SwitchItem</option>
-                    <option value="ColorItem">ColorItem</option>
-                    <option value="LocationItem">LocationItem</option>
-                    <option value="PlayerItem">PlayerItem</option>
-                    <option value="ImageItem">ImageItem</option>
-                </options>
-                <default>StringItem</default>
-            </parameter>
-        </config-description>
+				<options>
+					<option value="ContactItem">ContactItem</option>
+					<option value="DateTimeItem">DateTimeItem</option>
+					<option value="DimmerItem">DimmerItem</option>
+					<option value="NumberItem">NumberItem</option>
+					<option value="RollershutterItem">RollershutterItem</option>
+					<option value="StringItem">StringItem</option>
+					<option value="SwitchItem">SwitchItem</option>
+					<option value="ColorItem">ColorItem</option>
+					<option value="LocationItem">LocationItem</option>
+					<option value="PlayerItem">PlayerItem</option>
+					<option value="ImageItem">ImageItem</option>
+				</options>
+				<default>StringItem</default>
+			</parameter>
+		</config-description>
 
 	</channel-type>
 
@@ -270,32 +273,32 @@
 		<item-type>Dimmer</item-type>
 		<label>Dimmer type MQTT payload</label>
 		<description>Channel for mapping Dimmer types to MQTT messages</description>
-    <config-description>
-            <parameter name="topicId" type="text" required="true">
-                <label>MQTT Topic</label>
-                <description>MQTT topic for this channel
+		<config-description>
+			<parameter name="topicId" type="text" required="true">
+				<label>MQTT Topic</label>
+				<description>MQTT topic for this channel
                 </description>
-            </parameter>
-            <parameter name="itemtype" type="text" required="true">
-                <label>Item Type</label>
-                <description>Controls to what item types the data is mapped.
+			</parameter>
+			<parameter name="itemtype" type="text" required="true">
+				<label>Item Type</label>
+				<description>Controls to what item types the data is mapped.
                 </description>
-                <options>
-                    <option value="ContactItem">ContactItem</option>
-                    <option value="DateTimeItem">DateTimeItem</option>
-                    <option value="DimmerItem">DimmerItem</option>
-                    <option value="NumberItem">NumberItem</option>
-                    <option value="RollershutterItem">RollershutterItem</option>
-                    <option value="StringItem">StringItem</option>                    
-                    <option value="SwitchItem">SwitchItem</option>
-                    <option value="ColorItem">ColorItem</option>
-                    <option value="LocationItem">LocationItem</option>
-                    <option value="PlayerItem">PlayerItem</option>
-                    <option value="ImageItem">ImageItem</option>
-                </options>
-                <default>StringItem</default>
-            </parameter>
-        </config-description>
+				<options>
+					<option value="ContactItem">ContactItem</option>
+					<option value="DateTimeItem">DateTimeItem</option>
+					<option value="DimmerItem">DimmerItem</option>
+					<option value="NumberItem">NumberItem</option>
+					<option value="RollershutterItem">RollershutterItem</option>
+					<option value="StringItem">StringItem</option>
+					<option value="SwitchItem">SwitchItem</option>
+					<option value="ColorItem">ColorItem</option>
+					<option value="LocationItem">LocationItem</option>
+					<option value="PlayerItem">PlayerItem</option>
+					<option value="ImageItem">ImageItem</option>
+				</options>
+				<default>StringItem</default>
+			</parameter>
+		</config-description>
 
 	</channel-type>
 
@@ -303,32 +306,33 @@
 		<item-type>String</item-type>
 		<label>string type MQTT payload</label>
 		<description>Channel for mapping string types to MQTT messages</description>
-    <config-description>
-            <parameter name="topicId" type="text" required="true">
-                <label>MQTT Topic</label>
-                <description>MQTT topic for this channel
+		<state pattern="%s"></state>
+		<config-description>
+			<parameter name="topicId" type="text" required="true">
+				<label>MQTT Topic</label>
+				<description>MQTT topic for this channel
                 </description>
-            </parameter>
-            <parameter name="itemtype" type="text" required="true">
-                <label>Item Type</label>
-                <description>Controls to what item types the data is mapped.
+			</parameter>
+			<parameter name="itemtype" type="text" required="true">
+				<label>Item Type</label>
+				<description>Controls to what item types the data is mapped.
                 </description>
-                <options>
-                    <option value="ContactItem">ContactItem</option>
-                    <option value="DateTimeItem">DateTimeItem</option>
-                    <option value="DimmerItem">DimmerItem</option>
-                    <option value="NumberItem">NumberItem</option>
-                    <option value="RollershutterItem">RollershutterItem</option>
-                    <option value="StringItem">StringItem</option>                    
-                    <option value="SwitchItem">SwitchItem</option>
-                    <option value="ColorItem">ColorItem</option>
-                    <option value="LocationItem">LocationItem</option>
-                    <option value="PlayerItem">PlayerItem</option>
-                    <option value="ImageItem">ImageItem</option>
-                </options>
-                <default>StringItem</default>
-            </parameter>
-        </config-description>
+				<options>
+					<option value="ContactItem">ContactItem</option>
+					<option value="DateTimeItem">DateTimeItem</option>
+					<option value="DimmerItem">DimmerItem</option>
+					<option value="NumberItem">NumberItem</option>
+					<option value="RollershutterItem">RollershutterItem</option>
+					<option value="StringItem">StringItem</option>
+					<option value="SwitchItem">SwitchItem</option>
+					<option value="ColorItem">ColorItem</option>
+					<option value="LocationItem">LocationItem</option>
+					<option value="PlayerItem">PlayerItem</option>
+					<option value="ImageItem">ImageItem</option>
+				</options>
+				<default>StringItem</default>
+			</parameter>
+		</config-description>
 	</channel-type>
 
 </thing:thing-descriptions>
