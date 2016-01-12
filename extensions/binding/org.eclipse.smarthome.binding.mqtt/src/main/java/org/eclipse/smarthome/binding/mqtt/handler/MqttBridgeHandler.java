@@ -287,20 +287,25 @@ public class MqttBridgeHandler extends BaseBridgeHandler implements MqttConnecti
     }
 
     @Override
-    public void setConnected(boolean connected) {
+    public void setConnected(final boolean connected) {
         if (connected) {
             updateStatus(ThingStatus.ONLINE);
         } else {
             updateStatus(ThingStatus.OFFLINE);
         }
 
-        for (MqttBridgeListener mqttBridgeListener : mqttBridgeListeners) {
-            try {
-                mqttBridgeListener.setConnected(connected);
-            } catch (Exception e) {
-                logger.error("mqttBridgeListener unavailable error: {}", e.getMessage());
+        new Runnable() {
+            @Override
+            public void run() {
+                for (MqttBridgeListener mqttBridgeListener : mqttBridgeListeners) {
+                    try {
+                        mqttBridgeListener.setBridgeConnected(connected);
+                    } catch (Exception e) {
+                        logger.error("mqttBridgeListener unavailable error: {}", e.getMessage());
+                    }
+                }
             }
-        }
+        };
     }
 
     // private void registerMqttDiscoveryService(MqttService mqttService, String brokerName) {

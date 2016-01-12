@@ -218,8 +218,8 @@ public class MqttDiscoveryService extends AbstractDiscoveryService
     }
 
     @Override
-    public void setConnected(boolean connected) {
-        // ignore
+    public void setBridgeConnected(boolean connected) {
+        // TODO Auto-generated method stub
 
     }
 
