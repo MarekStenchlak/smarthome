@@ -558,10 +558,10 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
     }
 
     @Override
-    public void setConnected(boolean connected) {
+    public void setBridgeConnected(boolean connected) {
         if (connected && initialized) {
             updateStatus(ThingStatus.ONLINE);
         }
-
     }
+
 }

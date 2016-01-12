@@ -20,6 +20,6 @@ public interface MqttBridgeListener {
      *
      * @param connected
      */
-    public abstract void setConnected(boolean connected);
+    public abstract void setBridgeConnected(boolean connected);
 
 }
