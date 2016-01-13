@@ -4,14 +4,11 @@ import static org.eclipse.smarthome.binding.mqtt.MqttBindingConstants.*;
 
 import java.util.Collections;
 import java.util.Dictionary;
-import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-import org.eclipse.smarthome.binding.mqtt.discovery.MqttDiscoveryService2;
 import org.eclipse.smarthome.binding.mqtt.internal.MqttMessagePublisher;
 import org.eclipse.smarthome.binding.mqtt.internal.MqttMessageSubscriber;
 import org.eclipse.smarthome.core.thing.Bridge;
@@ -19,14 +16,12 @@ import org.eclipse.smarthome.core.thing.ChannelUID;
 import org.eclipse.smarthome.core.thing.Thing;
 import org.eclipse.smarthome.core.thing.ThingStatus;
 import org.eclipse.smarthome.core.thing.ThingTypeUID;
-import org.eclipse.smarthome.core.thing.ThingUID;
 import org.eclipse.smarthome.core.thing.binding.BaseBridgeHandler;
 import org.eclipse.smarthome.core.thing.binding.ThingHandler;
 import org.eclipse.smarthome.core.types.Command;
 import org.eclipse.smarthome.io.transport.mqtt.MqttConnectionObserver;
 import org.eclipse.smarthome.io.transport.mqtt.MqttService;
 import org.osgi.framework.ServiceReference;
-import org.osgi.framework.ServiceRegistration;
 import org.osgi.service.cm.Configuration;
 import org.osgi.service.cm.ConfigurationAdmin;
 import org.slf4j.Logger;
@@ -35,13 +30,15 @@ import org.slf4j.LoggerFactory;
 /**
  * The {@link MqttBridgeHandler} is responsible for handling connection to MQTT service
  *
- * @author Marcus of Wetware Labs - Initial contribution
+ * @author Marcus of Wetware Labs - Initial contribution OH2 version
+ * @author Marcel Verpaalen - Initial contribution ESH version and updates
+ *
  */
 public class MqttBridgeHandler extends BaseBridgeHandler implements MqttConnectionObserver {
 
     public final static Set<ThingTypeUID> SUPPORTED_THING_TYPES = Collections.singleton(THING_TYPE_BRIDGE);
 
-    private Map<ThingUID, ServiceRegistration<?>> discoveryServiceRegs = new HashMap<>();
+    // private Map<ThingUID, ServiceRegistration<?>> discoveryServiceRegs = new HashMap<>();
 
     private Logger logger = LoggerFactory.getLogger(MqttBridgeHandler.class);
 
@@ -52,86 +49,33 @@ public class MqttBridgeHandler extends BaseBridgeHandler implements MqttConnecti
     /** MqttService for sending/receiving messages **/
     private MqttService mqttService;
 
-    private MqttDiscoveryService2 discoveryService;
+    // private MqttDiscoveryService2 discoveryService;
 
     public MqttBridgeHandler(Bridge mqttBridge) {
         super(mqttBridge);
     }
 
+    /*
+     * (non-Javadoc)
+     *
+     * @see
+     * org.eclipse.smarthome.core.thing.binding.BaseThingHandler#thingUpdated(org.eclipse.smarthome.core.thing.Thing)
+     */
     @Override
     public void thingUpdated(Thing thing) {
         unregisterConnectionObserver(broker, this);
         initialize();
     }
 
-    /**
-     * Initializes the topics for this bridge
+    /***
+     * Called by the framework when this MQTT bridge is removed.
      */
-    private void initializeTopics() {
-        for (Thing thing : getThing().getThings()) {
-            ThingHandler handler = thing.getHandler();
-            if (handler != null) {
-                handler.initialize();
-            }
-        }
-    }
-
     @Override
-    public void handleCommand(ChannelUID channelUID, Command command) {
-        // TODO Auto-generated method stub. No implementation needed?
-    }
-
-    /***
-     * Get MQTT Broker name (actually the bridge ID).
-     *
-     * @return broker name
-     */
-    public String getBroker() {
-        return broker;
-    }
-
-    /***
-     * Register a MQTT topic subscriber to the broker associated with this bridge
-     *
-     * @param subscriber message subscriber
-     */
-    public void registerMessageConsumer(MqttMessageSubscriber subscriber) {
-        mqttService.registerMessageConsumer(broker, subscriber);
-    }
-
-    /***
-     * Register a MQTT topic publisher to the broker associated with this bridge
-     *
-     * @param publisher message publisher to be registered
-     */
-    public void registerMessageProducer(MqttMessagePublisher publisher) {
-        mqttService.registerMessageProducer(broker, publisher);
-    }
-
-    /***
-     * Unregister a MQTT topic subscriber from the broker associated with this bridge
-     *
-     * @param subscriber message subscriber to be unregistered
-     */
-    public void unRegisterMessageConsumer(MqttMessageSubscriber subscriber) {
-        mqttService.unregisterMessageConsumer(broker, subscriber);
-    }
-
-    /***
-     * Unregister a MQTT topic publisher from the broker associated with this bridge
-     *
-     * @param publisher message publisher to be unregistered
-     */
-    public void unRegisterMessageProducer(MqttMessagePublisher publisher) {
-        mqttService.unregisterMessageProducer(broker, publisher);
-    }
-
-    public void registerConnectionObserver(String brokerName, MqttConnectionObserver connectionObserver) {
-        mqttService.registerConnectionObserver(brokerName, connectionObserver);
-    }
-
-    public void unregisterConnectionObserver(String brokerName, MqttConnectionObserver connectionObserver) {
-        mqttService.unregisterConnectionObserver(brokerName, connectionObserver);
+    public void dispose() {
+        logger.debug("Mqtt Handler disposed.");
+        // discoveryService.deactivate();
+        // unregisterMqttDiscoveryService(this);
+        super.dispose();
     }
 
     /***
@@ -203,22 +147,37 @@ public class MqttBridgeHandler extends BaseBridgeHandler implements MqttConnecti
                 // class does not notify the mqttservice!
                 mqttService.updated(properties); // CHECK! Is this safe to do? Properties set this way are not
                                                  // propagated to ConfigurationAdmin..
-                // updateStatus(ThingStatus.ONLINE);
-
             } catch (Exception e) {
                 logger.error("Failed to set MQTT broker properties");
             }
         } catch (Exception e) {
             logger.error("Failed to get MQTT service!");
         }
+
+        registerConnectionObserver(broker, this);
         initializeTopics();
         initializeDiscoveryTopics();
 
-        registerConnectionObserver(broker, this);
         // registerMqttDiscoveryService(mqttService, broker);
         // registerMqttDiscoveryService(this, getThing());
     }
 
+    /**
+     * Initializes the topics for this bridge
+     */
+    private void initializeTopics() {
+        for (Thing thing : getThing().getThings()) {
+            ThingHandler handler = thing.getHandler();
+            if (handler != null) {
+                handler.initialize();
+            }
+        }
+    }
+
+    /**
+     * Initializes the topics for automatic discovery this bridge
+     * Notifies the discoveryConfigUpdate listeners about the update
+     */
     private void initializeDiscoveryTopics() {
         String discoveryTopic = null;
         String discoveryMode = null;
@@ -239,15 +198,95 @@ public class MqttBridgeHandler extends BaseBridgeHandler implements MqttConnecti
 
     }
 
-    /***
-     * Called by the framework when this MQTT bridge is removed.
-     */
     @Override
-    public void dispose() {
-        logger.debug("Mqtt Handler disposed.");
-        // discoveryService.deactivate();
-        // unregisterMqttDiscoveryService(this);
-        super.dispose();
+    public void handleCommand(ChannelUID channelUID, Command command) {
+        // Ignore
+    }
+
+    /***
+     * Get MQTT Broker name (actually the bridge ID).
+     *
+     * @return broker name
+     */
+    public String getBroker() {
+        return broker;
+    }
+
+    @Override
+    public void setConnected(final boolean connected) {
+        if (connected) {
+            updateStatus(ThingStatus.ONLINE);
+        } else {
+            updateStatus(ThingStatus.OFFLINE);
+        }
+
+        logger.trace("setBridgeConnected for topic handler '{}' connected={}.", getThing().getUID().getAsString(),
+                connected);
+        for (MqttBridgeListener mqttBridgeListener : mqttBridgeListeners) {
+            try {
+                mqttBridgeListener.setBridgeConnected(connected);
+            } catch (Exception e) {
+                logger.error("mqttBridgeListener unavailable error: {}", e.getMessage());
+
+            }
+        }
+        ;
+    }
+
+    /***
+     * Register a MQTT topic subscriber to the broker associated with this bridge
+     *
+     * @param subscriber message subscriber
+     */
+    public void registerMessageConsumer(MqttMessageSubscriber subscriber) {
+        mqttService.registerMessageConsumer(broker, subscriber);
+    }
+
+    /***
+     * Unregister a MQTT topic subscriber from the broker associated with this bridge
+     *
+     * @param subscriber message subscriber to be unregistered
+     */
+    public void unRegisterMessageConsumer(MqttMessageSubscriber subscriber) {
+        mqttService.unregisterMessageConsumer(broker, subscriber);
+    }
+
+    /***
+     * Register a MQTT topic publisher to the broker associated with this bridge
+     *
+     * @param publisher message publisher to be registered
+     */
+    public void registerMessageProducer(MqttMessagePublisher publisher) {
+        mqttService.registerMessageProducer(broker, publisher);
+    }
+
+    /***
+     * Unregister a MQTT topic publisher from the broker associated with this bridge
+     *
+     * @param publisher message publisher to be unregistered
+     */
+    public void unRegisterMessageProducer(MqttMessagePublisher publisher) {
+        mqttService.unregisterMessageProducer(broker, publisher);
+    }
+
+    /***
+     * Register a connection observer from the broker associated with this bridge
+     *
+     * @param brokerName
+     * @param MqttConnectionObserver to be unregistered
+     */
+    private void registerConnectionObserver(String brokerName, MqttConnectionObserver connectionObserver) {
+        mqttService.registerConnectionObserver(brokerName, connectionObserver);
+    }
+
+    /***
+     * Unregister a connection observer from the broker associated with this bridge
+     *
+     * @param brokerName
+     * @param MqttConnectionObserver to be unregistered
+     */
+    private void unregisterConnectionObserver(String brokerName, MqttConnectionObserver connectionObserver) {
+        mqttService.unregisterConnectionObserver(brokerName, connectionObserver);
     }
 
     /***
@@ -284,28 +323,6 @@ public class MqttBridgeHandler extends BaseBridgeHandler implements MqttConnecti
             // no action needed yet
         }
         return result;
-    }
-
-    @Override
-    public void setConnected(final boolean connected) {
-        if (connected) {
-            updateStatus(ThingStatus.ONLINE);
-        } else {
-            updateStatus(ThingStatus.OFFLINE);
-        }
-
-        new Runnable() {
-            @Override
-            public void run() {
-                for (MqttBridgeListener mqttBridgeListener : mqttBridgeListeners) {
-                    try {
-                        mqttBridgeListener.setBridgeConnected(connected);
-                    } catch (Exception e) {
-                        logger.error("mqttBridgeListener unavailable error: {}", e.getMessage());
-                    }
-                }
-            }
-        };
     }
 
     // private void registerMqttDiscoveryService(MqttService mqttService, String brokerName) {

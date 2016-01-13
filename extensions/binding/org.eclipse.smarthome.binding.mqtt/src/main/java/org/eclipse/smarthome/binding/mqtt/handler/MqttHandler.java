@@ -102,7 +102,7 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
      */
     @Override
     public void initialize() {
-        logger.debug("Initializing MQTT topic handler.");
+        logger.debug("Initializing MQTT topic handler '{}'.", getThing().getUID().getAsString());
         final String topicId = (String) getConfig().get(TOPIC_ID);
         final String type = (String) getConfig().get(TYPE);
 
@@ -167,8 +167,10 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
         itemList.put(CHANNEL_COLOR, new ColorItem(""));
 
         if (getBridgeHandler() != null) {
+            getBridgeHandler().registerMqttBridgeListener(this);
             updateStatus(ThingStatus.ONLINE);
             initialized = true;
+
         }
         logger.debug("MQTT topic {} handler initialized.", topicId);
     }
@@ -184,6 +186,9 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
         }
         if (subscriber != null) {
             getBridgeHandler().unRegisterMessageConsumer(subscriber);
+        }
+        if (getBridgeHandler() != null) {
+            getBridgeHandler().unRegisterMqttBridgeListener(this);
         }
         super.preDispose();
 
@@ -559,6 +564,9 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
 
     @Override
     public void setBridgeConnected(boolean connected) {
+        logger.debug("setBridgeConnected for topic handler '{}' connected={}.", getThing().getUID().getAsString(),
+                connected);
+
         if (connected && initialized) {
             updateStatus(ThingStatus.ONLINE);
         }
