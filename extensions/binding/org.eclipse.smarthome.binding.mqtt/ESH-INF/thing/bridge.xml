@@ -10,15 +10,21 @@
 
 		<config-description>
 
+
 			<parameter-group name="broker">
-				<label>Broker Configuration</label>
+				<label>Broker Connection Configuration</label>
 				<description>MQTT Broker Configuration</description>
 				<advanced>false</advanced>
+			</parameter-group>
+			<parameter-group name="message">
+				<label>Broker Message Settings</label>
+				<description>MQTT Broker Message Settings Configuration</description>
+				<advanced>true</advanced>
 			</parameter-group>
 			<parameter-group name="discovery">
 				<label>Discovery</label>
 				<description>Discovery Configuration</description>
-				<advanced>false</advanced>
+				<advanced>true</advanced>
 			</parameter-group>
 
 			<parameter name="url" type="text" groupName="broker">
@@ -45,7 +51,15 @@
 				<description>Client ID for connecting to the MQTT server.</description>
 				<required>false</required>
 			</parameter>
-			<parameter name="qos" type="text" groupName="broker">
+
+			<parameter name="async" type="boolean" groupName="message">
+				<label>async</label>
+				<description>Defines if messages are published asynchronously or synchronously.</description>
+				<default>true</default>
+				<advanced>true</advanced>
+				<required>false</required>
+			</parameter>
+			<parameter name="qos" type="text" groupName="message">
 				<label>Quality of Service</label>
 				<description>Set the quality of service level for sending messages to this broker.</description>
 				<options>
@@ -57,17 +71,10 @@
 				<advanced>true</advanced>
 				<required>false</required>
 			</parameter>
-			<parameter name="retain" type="boolean" groupName="broker">
+			<parameter name="retain" type="boolean" groupName="message">
 				<label>Retain</label>
 				<description>Defines if the broker should retain the messages sent to it.</description>
 				<default>false</default>
-				<advanced>true</advanced>
-				<required>false</required>
-			</parameter>
-			<parameter name="async" type="boolean" groupName="broker">
-				<label>async</label>
-				<description>Defines if messages are published asynchronously or synchronously.</description>
-				<default>true</default>
 				<advanced>true</advanced>
 				<required>false</required>
 			</parameter>
