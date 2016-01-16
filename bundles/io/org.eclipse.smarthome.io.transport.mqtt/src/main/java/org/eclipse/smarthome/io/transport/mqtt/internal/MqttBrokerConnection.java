@@ -134,7 +134,11 @@ public class MqttBrokerConnection implements MqttCallback {
             if (!this.url.equals(client.getServerURI()) || !this.clientId.equals(client.getClientId())) {
                 if (client.isConnected()) {
                     logger.info("MQTT broker server URI or client ID changed. Removing previous connection.");
-                    client.disconnect();
+                    try {
+                        client.disconnect();
+                    } catch (Exception e) {
+                        logger.error("MQTT broker disconnect failed for client {}.", client.getClientId());
+                    }
                 }
                 client = null;
             }
@@ -380,7 +384,9 @@ public class MqttBrokerConnection implements MqttCallback {
             client.connect(options);
         } catch (Exception e) {
             if (started) {
-                setStarted(false);
+                // TODO: Understand why/if this gives issues
+
+                // setStarted(false);
             }
             throw e;
         }
@@ -436,7 +442,7 @@ public class MqttBrokerConnection implements MqttCallback {
      * @param publisher to add.
      */
     public synchronized void addProducer(MqttMessageProducer publisher) {
-        logger.trace("Add message producer for broker '{}'", name);
+        logger.debug("Add message producer for broker '{}'", name);
         producers.add(publisher);
         if (started) {
             startProducer(publisher);
