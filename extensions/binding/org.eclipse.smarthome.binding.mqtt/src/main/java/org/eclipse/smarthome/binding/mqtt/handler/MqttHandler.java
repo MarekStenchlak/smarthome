@@ -280,7 +280,7 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
         for (Channel channel : getThing().getChannels()) {
 
             if (channel.getUID().getId().equals(channelTopicId)) {
-
+                logger.debug("dynamic channel {}", channel.getUID().getAsString());
                 // TODO: add to channel properties the full topic and check on that as well
                 // TODO: Replace depreciated method with new way
                 for (Item itemt : channel.getLinkedItems()) {
@@ -289,7 +289,7 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
                         String channelz = channel.getUID().getId();
 
                         // state could be casted to type 'type'
-                        logger.trace(
+                        logger.debug(
                                 "MQTT: Received state ( topic '{}'). Propagating payload '{}' to dynamic channel '{}' as type '{}')",
                                 topic, state, channelz, s.getClass().getName());
 
