@@ -179,7 +179,7 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
      * Callback from framework when this Topic handler is deleted
      */
     @Override
-    public void preDispose() {
+    public void dispose() {
         logger.debug("Disposing MQTT topic handler.");
         if (publisher != null) {
             getBridgeHandler().unRegisterMessageProducer(publisher);
@@ -190,7 +190,7 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
         if (getBridgeHandler() != null) {
             getBridgeHandler().unRegisterMqttBridgeListener(this);
         }
-        super.preDispose();
+        super.dispose();
 
     }
 
@@ -520,7 +520,7 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
      * org.eclipse.smarthome.core.thing.Bridge)
      */
     @Override
-    protected void bridgeHandlerInitialized(ThingHandler thingHandler, Bridge bridge) {
+    public void bridgeHandlerInitialized(ThingHandler thingHandler, Bridge bridge) {
         logger.debug("Bridge {} initialized for topic: {}", bridge.getUID().toString(), getThing().getUID().toString());
         if (bridgeHandler != null) {
             // bridgeHandler.unRegisterMqttBridgeListener(this);
