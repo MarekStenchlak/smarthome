@@ -14,14 +14,16 @@
 		<description>Topic for MQTT Binding</description>
 
 		<channels>
-			<channel id="number" typeId="number-channel" />
-			<channel id="switch" typeId="switch-channel" />
-			<channel id="color" typeId="color-channel" />
-			<channel id="contact" typeId="contact-channel" />
-			<channel id="datetime" typeId="datetime-channel" />
-			<channel id="rollershutter" typeId="rollershutter-channel" />
-			<channel id="dimmer" typeId="dimmer-channel" />
-			<channel id="string" typeId="string-channel" />
+    <!--    <channel id="number" typeId="number-channel" />
+            <channel id="switch" typeId="switch-channel" />
+            <channel id="color" typeId="color-channel" />
+            <channel id="contact" typeId="contact-channel" />
+            <channel id="datetime" typeId="datetime-channel" />
+            <channel id="rollershutter" typeId="rollershutter-channel" />
+            <channel id="dimmer" typeId="dimmer-channel" />
+            <channel id="string" typeId="string-channel" />
+    -->  
+			<channel id="all" typeId="string-channel" />
 		</channels>
 		<config-description>
 			<parameter name="topicId" type="text" required="true">
@@ -95,7 +97,7 @@
 					<option value="PlayerItem">PlayerItem</option>
 					<option value="ImageItem">ImageItem</option>
 				</options>
-				<default>StringItem</default>
+				<default>NumberItem</default>
 			</parameter>
 		</config-description>
 
@@ -129,7 +131,7 @@
 					<option value="PlayerItem">PlayerItem</option>
 					<option value="ImageItem">ImageItem</option>
 				</options>
-				<default>StringItem</default>
+				<default>SwitchItem</default>
 			</parameter>
 		</config-description>
 
@@ -163,7 +165,7 @@
 					<option value="PlayerItem">PlayerItem</option>
 					<option value="ImageItem">ImageItem</option>
 				</options>
-				<default>StringItem</default>
+				<default>ColorItem</default>
 			</parameter>
 		</config-description>
 
