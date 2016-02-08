@@ -15,7 +15,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -283,10 +282,10 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
             Configuration channelConf = channel.getConfiguration();
 
             /*
-            //if the channel config does not have a topic, give it the topic of the Thing
-            if (channelConf.get(TOPIC_ID) == null){
-                channelConf.put(TOPIC_ID, getConfig().get(TOPIC_ID)) ;
-            }
+             * //if the channel config does not have a topic, give it the topic of the Thing
+             * if (channelConf.get(TOPIC_ID) == null){
+             * channelConf.put(TOPIC_ID, getConfig().get(TOPIC_ID)) ;
+             * }
              */
             Object channelConfTopic = null;
             if (channelConf != null) {
@@ -318,44 +317,44 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
 
         }
         /*
-        if (false) {
-            // Original method Marcus for channels based on specific type
-            for (String channelName : itemList.keySet()) {
-                // go through every active (linked) channel and check if the Item associated with it has DataTypes that
-                // we
-                // can cast the state into
-        
-                logger.trace("Channel for (topic '{}' payload '{}') {}:{}", topic, state, channelName,
-                        isLinked(channelName));
-        
-                if (isLinked(channelName) || true) {
-        
-                    for (Class<? extends Type> asc : itemList.get(channelName).getAcceptedDataTypes()) {
-                        // for (Class<? extends Type> asc : channelT.getAcceptedItemType()) {
-        
-                        try {
-                            Method valueOf = asc.getMethod("valueOf", String.class);
-                            State s = (State) valueOf.invoke(asc, state);
-        
-                            if (s != null) {
-                                // state could be casted to type 'type'
-                                logger.trace(
-                                        "MQTT: Received state (topic '{}'). Propagating payload '{}' to channel '{}' as type '{}')",
-                                        topic, state, channelName, s.getClass().getName());
-                                updateState(channelName, s);
-                                break;
-                            }
-                        } catch (NoSuchMethodException e) {
-                        } catch (IllegalArgumentException e) {
-                        } catch (IllegalAccessException e) {
-                        } catch (InvocationTargetException e) {
-                        }
-                    }
-                }
-        
-            }
-        }
-        */
+         * if (false) {
+         * // Original method Marcus for channels based on specific type
+         * for (String channelName : itemList.keySet()) {
+         * // go through every active (linked) channel and check if the Item associated with it has DataTypes that
+         * // we
+         * // can cast the state into
+         *
+         * logger.trace("Channel for (topic '{}' payload '{}') {}:{}", topic, state, channelName,
+         * isLinked(channelName));
+         *
+         * if (isLinked(channelName) || true) {
+         *
+         * for (Class<? extends Type> asc : itemList.get(channelName).getAcceptedDataTypes()) {
+         * // for (Class<? extends Type> asc : channelT.getAcceptedItemType()) {
+         *
+         * try {
+         * Method valueOf = asc.getMethod("valueOf", String.class);
+         * State s = (State) valueOf.invoke(asc, state);
+         *
+         * if (s != null) {
+         * // state could be casted to type 'type'
+         * logger.trace(
+         * "MQTT: Received state (topic '{}'). Propagating payload '{}' to channel '{}' as type '{}')",
+         * topic, state, channelName, s.getClass().getName());
+         * updateState(channelName, s);
+         * break;
+         * }
+         * } catch (NoSuchMethodException e) {
+         * } catch (IllegalArgumentException e) {
+         * } catch (IllegalAccessException e) {
+         * } catch (InvocationTargetException e) {
+         * }
+         * }
+         * }
+         *
+         * }
+         * }
+         */
         if (!linkMessage) {
             channelEnableMessage();
             linkMessage = true;
@@ -380,19 +379,14 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
                 List<Channel> channels = new CopyOnWriteArrayList<>();
                 ChannelTypeUID channelTypeUID = new ChannelTypeUID(MqttBindingConstants.BINDING_ID, "string-channel");
 
-                // This probably needs to be added as a config iso as a property
-                Map<String, String> channelProperties = new HashMap<String, String>();
-                channelProperties.put("ChannelTopic", topic);
-
                 Configuration channelConfig = new Configuration();
-
-                channelConfig.put("topicId", topic);
+                channelConfig.put(TOPIC_ID, topic);
                 channelConfig.put("itemtype", "StringItem");
 
                 Channel channel = ChannelBuilder.create(new ChannelUID(getThing().getUID(), channelTopicId), "String")
                         .withType(channelTypeUID).withLabel(topic).withConfiguration(channelConfig).build();
-                // .withProperties(channelProperties) gives error
                 channels.add(channel);
+
                 thingBuilder.withChannel(channel).withConfiguration(getConfig());
                 updateThing(thingBuilder.build());
 
