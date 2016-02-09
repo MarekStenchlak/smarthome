@@ -49,6 +49,7 @@ import org.eclipse.smarthome.core.thing.Channel;
 import org.eclipse.smarthome.core.thing.ChannelUID;
 import org.eclipse.smarthome.core.thing.Thing;
 import org.eclipse.smarthome.core.thing.ThingStatus;
+import org.eclipse.smarthome.core.thing.ThingStatusDetail;
 import org.eclipse.smarthome.core.thing.ThingTypeUID;
 import org.eclipse.smarthome.core.thing.binding.BaseThingHandler;
 import org.eclipse.smarthome.core.thing.binding.ThingHandler;
@@ -384,7 +385,8 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
                 channelConfig.put("itemtype", "StringItem");
 
                 Channel channel = ChannelBuilder.create(new ChannelUID(getThing().getUID(), channelTopicId), "String")
-                        .withType(channelTypeUID).withLabel(topic).withConfiguration(channelConfig).build();
+                        .withType(channelTypeUID).withLabel(channelTopicId).withDescription(topic)
+                        .withConfiguration(channelConfig).build();
                 channels.add(channel);
 
                 thingBuilder.withChannel(channel).withConfiguration(getConfig());
@@ -432,6 +434,8 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
 
         } catch (Exception e) {
             logger.error("Could not create subscriber: {}", e.getMessage());
+            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, e.getMessage().toString());
+
         }
 
     }
