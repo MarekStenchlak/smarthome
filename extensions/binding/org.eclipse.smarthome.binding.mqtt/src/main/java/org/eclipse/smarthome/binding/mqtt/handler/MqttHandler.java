@@ -292,9 +292,6 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
             newChannelfromTopic(topic);
         }
 
-        for (Channel channel : getThing().getChannels()) {
-            logger.debug("Channel {} debug running topic", channel.getUID().getAsString(), topic);
-        }
         // new alternative code for dynamic topic channels
         for (Channel channel : getThing().getChannels()) {
 
@@ -317,10 +314,10 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
 
                     logger.debug("dynamic channel {}", channel.getUID().getAsString());
 
-                    // TODO: Replace depreciated method with new way
                     // TODO: below is creating issues for channels with multiple items, as it publishes a state for
-                    // every linked item
+                    // every linked item & it is using depreciated call
                     for (Item itemt : channel.getLinkedItems()) {
+
                         State s = TypeParser.parseState(itemt.getAcceptedDataTypes(), state);
                         if (s != null) {
                             String channelz = channel.getUID().getId();
@@ -389,8 +386,8 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
     /***
      * Generates a dynamic channel from a topic if not exists
      *
-     * @param channelTopicId MQTT topic of the received message
-     *            channelTopicId
+     * @param topic MQTT topic of the received message
+     *
      */
     private synchronized void newChannelfromTopic(String topic) {
         newChannelfromTopic(topic, "StringType");
@@ -399,8 +396,8 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
     /***
      * Generates a dynamic channel from a topic if not exists
      *
-     * @param channelTopicId MQTT topic of the received message
-     *            channelTopicId
+     * @param topic MQTT topic of the received message
+     *
      *            itemtype
      */
     private synchronized void newChannelfromTopic(String topic, String itemtype) {
