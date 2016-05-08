@@ -12,7 +12,11 @@ angular.module('PaperUI.controllers.configuration', []).controller('Configuratio
     }
     $scope.getThingTypeLabel = function(key) {
         if ($scope.thingTypes && Object.keys($scope.thingTypes).length != 0) {
-            return $scope.thingTypes[key].label;
+            if ($scope.thingTypes[key]) {
+                return $scope.thingTypes[key].label;
+            } else {
+                return '';
+            }
         } else {
             thingTypeRepository.setDirty(false);
         }
@@ -117,7 +121,7 @@ angular.module('PaperUI.controllers.configuration', []).controller('Configuratio
     }
     $scope.save = function() {
         if ($scope.expertMode) {
-            $scope.configuration = configService.getConfigAsObject($scope.configArray);
+            $scope.configuration = configService.getConfigAsObject($scope.configArray, $scope.parameters);
         }
         $scope.configuration = configService.replaceEmptyValues($scope.configuration);
         bindingService.updateConfig({
@@ -131,7 +135,7 @@ angular.module('PaperUI.controllers.configuration', []).controller('Configuratio
         if ($scope.expertMode) {
             $scope.configArray = configService.getConfigAsArray($scope.configuration);
         } else {
-            $scope.configuration = configService.getConfigAsObject($scope.configArray);
+            $scope.configuration = configService.getConfigAsObject($scope.configArray, $scope.parameters);
         }
     });
 }).controller('ServicesController', function($scope, $mdDialog, serviceConfigService, toastService) {
@@ -166,17 +170,6 @@ angular.module('PaperUI.controllers.configuration', []).controller('Configuratio
                 serviceId : serviceId,
                 configDescriptionURI : configDescriptionURI
             }
-        });
-    }
-    $scope.remove = function(serviceId, event) {
-        var confirm = $mdDialog.confirm().title('Remove configuration').content('Would you like to remove the service configurarion for the service ' + serviceId + '?').ariaLabel('Remove Service Configuration').ok('Remove').cancel('Cancel').targetEvent(event);
-        $mdDialog.show(confirm).then(function() {
-            serviceConfigService.deleteConfig({
-                id : serviceId
-            }, function() {
-                toastService.showDefaultToast('Service config deleted.');
-                $scope.refresh();
-            });
         });
     }
     $scope.refresh();
@@ -236,7 +229,7 @@ angular.module('PaperUI.controllers.configuration', []).controller('Configuratio
     }
     $scope.save = function() {
         if ($scope.expertMode) {
-            $scope.configuration = configService.getConfigAsObject($scope.configArray);
+            $scope.configuration = configService.getConfigAsObject($scope.configArray, $scope.parameters);
         }
         $scope.configuration = configService.setConfigDefaults($scope.configuration, $scope.parameters);
         serviceConfigService.updateConfig({
@@ -250,7 +243,7 @@ angular.module('PaperUI.controllers.configuration', []).controller('Configuratio
         if ($scope.expertMode) {
             $scope.configArray = configService.getConfigAsArray($scope.configuration);
         } else {
-            $scope.configuration = configService.getConfigAsObject($scope.configArray);
+            $scope.configuration = configService.getConfigAsObject($scope.configArray, $scope.parameters);
         }
     });
 }).controller('AddGroupDialogController', function($scope, $mdDialog) {
@@ -498,11 +491,15 @@ angular.module('PaperUI.controllers.configuration', []).controller('Configuratio
     };
 
     function checkAdvance(channels) {
-        angular.forEach(channels, function(value) {
-            if (value.advanced) {
-                return true;
+        if (channels) {
+            for (var i = 0, len = channels.length; i < len; i++) {
+                var channel = channels[i];
+                var channelType = $scope.getChannelTypeById(channel.id);
+                if (channelType && channelType.advanced) {
+                    return true;
+                }
             }
-        });
+        }
         return false;
     }
 

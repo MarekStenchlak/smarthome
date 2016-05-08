@@ -37,17 +37,67 @@
   </feature>
 
   <feature name="esh-tp-jax-rs" version="${project.version}">
-    <capability>esh.tp;feature=jax-rs;version=5.3</capability>
+    <capability>esh.tp;feature=jax-rs;version=5.3.1</capability>
     <feature>esh-tp-jax-rs-min</feature>
     <feature>esh-tp-jax-rs-provider-gson</feature>
   </feature>
 
   <feature name="esh-tp-jax-rs-min" version="${project.version}">
-    <capability>esh.tp;feature=jax-rs-min;version=5.3</capability>
-
+    <capability>esh.tp;feature=jax-rs-min;version=5.3.1</capability>
     <feature dependency="true">http</feature>
-    <bundle dependency="true">mvn:com.eclipsesource.jaxrs/jersey-min/2.22.1</bundle>
-    <bundle>mvn:com.eclipsesource.jaxrs/publisher/5.3</bundle>
+    <feature dependency="true">esh-kat.cpy-jersey-min-2.22.2</feature>
+    <bundle>mvn:com.eclipsesource.jaxrs/publisher/5.3.1</bundle>
+  </feature>
+
+  <feature name="esh-kat.cpy-jersey-min-2.22.2" version="${project.version}">
+    <feature>http</feature>
+    <bundle start-level="36">mvn:org.glassfish.jersey.containers/jersey-container-servlet/2.22.2</bundle>
+    <bundle start-level="36">mvn:org.glassfish.jersey.media/jersey-media-sse/2.22.2</bundle>
+    <bundle start-level="36">mvn:org.glassfish.jersey.media/jersey-media-multipart/2.22.2</bundle>
+    <bundle start-level="36" dependency="true">mvn:org.glassfish.jersey.containers/jersey-container-servlet-core/2.22.2</bundle>
+    <bundle start-level="36" dependency="true">mvn:org.glassfish.jersey.core/jersey-common/2.22.2</bundle>
+    <bundle start-level="36" dependency="true">mvn:org.glassfish.jersey.bundles.repackaged/jersey-guava/2.22.2</bundle>
+    <bundle start-level="36" dependency="true">mvn:org.glassfish.jersey.core/jersey-server/2.22.2</bundle>
+    <bundle start-level="36" dependency="true">mvn:org.glassfish.jersey.core/jersey-client/2.22.2</bundle>
+    <bundle start-level="36" dependency="true">mvn:org.glassfish.jersey.media/jersey-media-jaxb/2.22.2</bundle>
+    <bundle start-level="33" dependency="true">mvn:org.glassfish.hk2/hk2-api/2.4.0-b34</bundle>
+    <bundle start-level="33" dependency="true">mvn:org.glassfish.hk2/hk2-locator/2.4.0-b34</bundle>
+    <bundle start-level="33" dependency="true">mvn:org.glassfish.hk2/hk2-utils/2.4.0-b34</bundle>
+    <bundle start-level="33" dependency="true">mvn:org.glassfish.hk2/osgi-resource-locator/1.0.1</bundle>
+    <bundle start-level="33" dependency="true">mvn:org.glassfish.hk2.external/javax.inject/2.4.0-b34</bundle>
+    <bundle start-level="33" dependency="true">mvn:org.glassfish.hk2.external/aopalliance-repackaged/2.4.0-b34</bundle>
+    <bundle dependency="true">mvn:javax.annotation/javax.annotation-api/1.2</bundle>
+    <bundle dependency="true">mvn:javax.validation/validation-api/1.1.0.Final</bundle>
+    <bundle dependency="true">mvn:javax.ws.rs/javax.ws.rs-api/2.0.1</bundle>
+    <bundle dependency="true">mvn:org.javassist/javassist/3.18.1-GA</bundle>
+    <bundle dependency="true">mvn:org.jvnet.mimepull/mimepull/1.9.6</bundle>
+  </feature>
+
+  <feature name="esh-kat.cpy-swagger-jersey2-1.5.7" version="${project.version}">
+    <feature dependency="true">esh-kat.cpy-jersey-min-2.22.2</feature>
+    <bundle>mvn:de.maggu2810.thirdparty.modified.io.swagger/swagger-jersey2-jaxrs/1.5.7.v20160429-1435</bundle>
+    <bundle dependency="true">mvn:io.swagger/swagger-annotations/1.5.7</bundle>
+    <bundle dependency="true">mvn:io.swagger/swagger-core/1.5.7</bundle>
+    <bundle dependency="true">mvn:io.swagger/swagger-jaxrs/1.5.7</bundle>
+    <bundle dependency="true">mvn:io.swagger/swagger-models/1.5.7</bundle>
+    <bundle dependency="true">mvn:de.maggu2810.thirdparty.modified.org.reflections/reflections/0.9.10.v20160429-1435</bundle>
+    <bundle dependency="true">mvn:com.fasterxml.jackson.core/jackson-annotations/2.4.5</bundle>
+    <bundle dependency="true">mvn:com.fasterxml.jackson.core/jackson-core/2.4.5</bundle>
+    <bundle dependency="true">mvn:com.fasterxml.jackson.core/jackson-databind/2.4.5</bundle>
+    <bundle dependency="true">mvn:com.fasterxml.jackson.dataformat/jackson-dataformat-xml/2.4.5</bundle>
+    <bundle dependency="true">mvn:com.fasterxml.jackson.dataformat/jackson-dataformat-yaml/2.4.5</bundle>
+    <bundle dependency="true">mvn:com.fasterxml.jackson.datatype/jackson-datatype-joda/2.4.5</bundle>
+    <bundle dependency="true">mvn:com.fasterxml.jackson.jaxrs/jackson-jaxrs-base/2.4.5</bundle>
+    <bundle dependency="true">mvn:com.fasterxml.jackson.jaxrs/jackson-jaxrs-json-provider/2.4.5</bundle>
+    <bundle dependency="true">mvn:com.fasterxml.jackson.module/jackson-module-jaxb-annotations/2.4.5</bundle>
+    <bundle dependency="true">mvn:com.google.code.findbugs/annotations/2.0.1</bundle>
+    <bundle dependency="true">mvn:com.google.guava/guava/18.0</bundle>
+    <bundle dependency="true">mvn:joda-time/joda-time/2.2</bundle>
+    <bundle dependency="true">mvn:org.apache.commons/commons-lang3/3.2.1</bundle>
+    <bundle dependency="true">mvn:org.codehaus.woodstox/stax2-api/3.1.4</bundle>
+    <bundle dependency="true">mvn:org.javassist/javassist/3.19.0-GA</bundle>
+    <bundle dependency="true">mvn:org.slf4j/slf4j-api/1.7.7</bundle>
+    <bundle dependency="true">mvn:org.yaml/snakeyaml/1.12</bundle>
   </feature>
 
   <feature name="esh-tp-jax-rs-provider-gson" version="${project.version}">
@@ -58,10 +108,10 @@
   </feature>
 
   <feature name="esh-tp-jax-rs-provider-swagger" version="${project.version}">
-    <capability>esh.tp;feature=jax-rs-provider-swagger;version=2.3</capability>
+    <capability>esh.tp;feature=jax-rs-provider-swagger;version=1.1.1</capability>
     <feature dependency="true">esh-tp-jax-rs-min</feature>
-    <bundle>mvn:de.maggu2810.thirdparty.modified.com.eclipsesource.jaxrs/swagger-all/1.5.5.sp1</bundle>
-    <bundle>mvn:com.eclipsesource.jaxrs/provider-swagger/1.1</bundle>
+    <feature>esh-kat.cpy-swagger-jersey2-1.5.7</feature>
+    <bundle>mvn:com.eclipsesource.jaxrs/provider-swagger/1.1.1</bundle>
   </feature>
 
   <feature name="esh-tp-jupnp" description=" UPnP/DLNA library for Java" version="${project.version}">
@@ -93,7 +143,10 @@
     <bundle dependency="true">mvn:org.eclipse.emf/org.eclipse.emf.ecore/2.11.1-v20150805-0538</bundle>
     <bundle dependency="true">mvn:org.eclipse.emf/org.eclipse.emf.ecore.xmi/2.11.1-v20150805-0538</bundle>
     <bundle dependency="true">mvn:org.eclipse.xtext/org.eclipse.xtext.common.types/2.9.2</bundle>
-    <bundle dependency="true">mvn:org.eclipse.xtext/org.eclipse.xtext.xbase/2.9.2</bundle>
+
+    <bundle dependency="true">mvn:de.maggu2810.thirdparty.modified.org.eclipse.xtext/org.eclipse.xtext.xbase/2.9.2.sp1</bundle>
+    <bundle dependency="true">mvn:javax.annotation/javax.annotation-api/1.2</bundle>
+
     <bundle dependency="true">mvn:org.eclipse.xtext/org.eclipse.xtext.xbase.lib/2.9.2</bundle>
     <bundle dependency="true">mvn:org.eclipse.xtext/org.eclipse.xtext.smap/2.9.2</bundle>
     <bundle dependency="true">mvn:org.eclipse.xtext/org.eclipse.xtext.util/2.9.2</bundle>

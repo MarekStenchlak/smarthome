@@ -110,7 +110,27 @@ public class Configuration {
         return fields;
     }
 
+    /**
+     * Check if the given key is present in the configuration.
+     *
+     * @param key the key that existence should be checked
+     * @return true if the key is part of the configuration, false if not
+     */
+    public boolean containsKey(String key) {
+        synchronized (this) {
+            return properties.containsKey(key);
+        }
+    }
+
+    /**
+     * @deprecated Use {@link #get(String)} instead.
+     */
+    @Deprecated
     public Object get(Object key) {
+        return this.get((String) key);
+    }
+
+    public Object get(String key) {
         synchronized (this) {
             return properties.get(key);
         }
@@ -122,7 +142,15 @@ public class Configuration {
         }
     }
 
+    /**
+     * @deprecated Use {@link #remove(String)} instead.
+     */
+    @Deprecated
     public Object remove(Object key) {
+        return remove((String) key);
+    }
+
+    public Object remove(String key) {
         synchronized (this) {
             return properties.remove(key);
         }
