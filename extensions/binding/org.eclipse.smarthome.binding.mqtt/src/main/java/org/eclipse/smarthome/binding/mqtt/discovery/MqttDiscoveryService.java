@@ -158,29 +158,30 @@ public class MqttDiscoveryService extends AbstractDiscoveryService
             discoveredTopic = StringUtils.join(result, "/");
         }
         if (!discoveredTopics.contains(discoveredTopic)) {
-            addDiscoveryResult(discoveredTopic);
+            addDiscoveryResult(topic, discoveredTopic);
         }
     }
 
     /**
-     * @param topic
+     * @param thingTopic
      */
-    private void addDiscoveryResult(String topic) {
-        String id = makeTopicString(topic);
+    private void addDiscoveryResult(String topic, String thingTopic) {
+        String id = makeTopicString(thingTopic);
 
-        logger.trace("Adding new topic thing on {} with id '{}' to Smarthome inbox", topic, id);
+        logger.trace("Adding new topic thing on {} with id '{}' to inbox", thingTopic, id);
         Map<String, Object> properties = new HashMap<>(2);
-        properties.put(TOPIC_ID, topic);
+        properties.put(TOPIC_ID, thingTopic);
         properties.put(TYPE, "state");
         properties.put(DIRECTION, "in");
         properties.put(TRANSFORM, "default");
+        properties.put(DISCOVERED_TOPIC, topic);
         ThingUID uid = new ThingUID(THING_TYPE_TOPIC, id);
         if (uid != null) {
             DiscoveryResult result = DiscoveryResultBuilder.create(uid).withProperties(properties)
-                    .withBridge(bridge.getUID()).withLabel("topic: " + topic).build();
+                    .withBridge(bridge.getUID()).withLabel("topic: " + thingTopic).build();
             thingDiscovered(result);
         }
-        discoveredTopics.add(topic);
+        discoveredTopics.add(thingTopic);
     }
 
     private String makeTopicString(String topicString) {
