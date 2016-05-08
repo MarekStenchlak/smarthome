@@ -54,6 +54,7 @@ public class MqttBindingConstants {
     public final static String TRANSFORM = "transform";
 
     // misc
+    public final static String DISCOVERED_TOPIC = "DiscoveredTopic";
     public final static String MQTT_SERVICE_PID = "org.eclipse.smarthome.mqtt"; // for some reason
                                                                                 // it is not named
                                                                                 // org.eclipse.smarthome.io.transport.mqtt

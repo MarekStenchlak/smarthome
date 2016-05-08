@@ -73,7 +73,21 @@ import com.google.common.collect.Sets;
  * @author Marcel Verpaalen - ESH version, multi-topic things, dynamic channels
  *
  */
+
+// TODO: Allow changing of channel type!
+// TODO: Apply logic build in state in the commands as well
+// TODO: Major cleanup
+// TODO: Move the properties down to the channel level (in-out, state/command, transform etc)
+// TODO: Add button to add a channel
+// Ensure transform is working
+
 public class MqttHandler extends BaseThingHandler implements MqttBridgeListener, MqttMessageSubscriberListener {
+
+    @Override
+    public void thingUpdated(Thing thing) {
+        logger.debug("Updated called for  MQTT topic handler '{}'.", getThing().getUID().getAsString());
+        super.thingUpdated(thing);
+    }
 
     public final static Set<ThingTypeUID> SUPPORTED_THING_TYPES = Sets.newHashSet(THING_TYPE_TOPIC);
 
@@ -135,6 +149,11 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
             }
         } else {
             throw new IllegalArgumentException("MQTT topic must be defined!");
+        }
+
+        String discoveredTopic = (String) getConfig().get(DISCOVERED_TOPIC);
+        if (discoveredTopic != null && !discoveredTopic.isEmpty()) {
+            newChannelfromTopic(discoveredTopic);
         }
 
         stateList.add(OnOffType.class);
@@ -269,9 +288,13 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
     public void mqttStateReceived(String topic, String state) {
         logger.trace("MQTT: Received state (topic '{}' payload '{}')", topic, state);
 
-        String channelTopicId = makeTopicString(topic);
-        newChannelfromTopic(topic, channelTopicId);
+        if (!channelTopics.contains(topic)) {
+            newChannelfromTopic(topic);
+        }
 
+        for (Channel channel : getThing().getChannels()) {
+            logger.debug("Channel {} debug running topic", channel.getUID().getAsString(), topic);
+        }
         // new alternative code for dynamic topic channels
         for (Channel channel : getThing().getChannels()) {
 
@@ -287,27 +310,36 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
             if (channelConf != null) {
                 channelConfTopic = channelConf.get(TOPIC_ID);
             }
-            if (channelConfTopic == null || channelConfTopic.equals(topic)) {
-                logger.debug("dynamic channel {}", channel.getUID().getAsString());
 
-                // TODO: add to channel properties the full topic and check on that as well
-                // TODO: Replace depreciated method with new way
-                for (Item itemt : channel.getLinkedItems()) {
-                    State s = TypeParser.parseState(itemt.getAcceptedDataTypes(), state);
-                    if (s != null) {
-                        String channelz = channel.getUID().getId();
+            if (channelConfTopic != null) {
 
-                        // state could be casted to type 'type'
-                        logger.debug(
-                                "MQTT: Received state ( topic '{}'). Propagating payload '{}' to dynamic channel '{}' as type '{}')",
-                                topic, state, channelz, s.getClass().getName());
+                if (channelConfTopic.equals(topic)) {
 
-                        updateState(channelz, s);
-                        break;
+                    logger.debug("dynamic channel {}", channel.getUID().getAsString());
+
+                    // TODO: Replace depreciated method with new way
+                    // TODO: below is creating issues for channels with multiple items, as it publishes a state for
+                    // every linked item
+                    for (Item itemt : channel.getLinkedItems()) {
+                        State s = TypeParser.parseState(itemt.getAcceptedDataTypes(), state);
+                        if (s != null) {
+                            String channelz = channel.getUID().getId();
+
+                            // state could be casted to type 'type'
+                            logger.debug(
+                                    "MQTT: Received state ( topic '{}'). Propagating payload '{}' to dynamic channel '{}' as type '{}')",
+                                    topic, state, channelz, s.getClass().getName());
+
+                            updateState(channelz, s);
+                            break;
+                        }
                     }
+                } else {
+                    logger.debug("Topic {} does not match channeltopic {}", topic, channelConfTopic.toString());
                 }
+
             } else {
-                logger.debug("Topic {} does not match channeltopic {}", topic, channelConfTopic.toString());
+                logger.debug("Channel {} does have channeltopic or config", channel.toString());
 
             }
 
@@ -360,8 +392,8 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
      * @param channelTopicId MQTT topic of the received message
      *            channelTopicId
      */
-    private synchronized void newChannelfromTopic(String topic, String channelTopicId) {
-        newChannelfromTopic(topic, channelTopicId, "StringType");
+    private synchronized void newChannelfromTopic(String topic) {
+        newChannelfromTopic(topic, "StringType");
     }
 
     /***
@@ -371,9 +403,10 @@ public class MqttHandler extends BaseThingHandler implements MqttBridgeListener,
      *            channelTopicId
      *            itemtype
      */
-    private synchronized void newChannelfromTopic(String topic, String channelTopicId, String itemtype) {
+    private synchronized void newChannelfromTopic(String topic, String itemtype) {
 
         if (!channelTopics.contains(topic)) {
+            String channelTopicId = makeTopicString(topic);
 
             if (getThing().getChannel(channelTopicId) == null) {
                 logger.info("creating channel for topic '{}' for thing {}", channelTopicId, getThing().getUID());
