@@ -1,11 +1,12 @@
-{  
-   "triggers":[  
-      {  
+{
+   "triggers":[
+      {
          "uid":"GenericEventTrigger",
          "label":"Basic Event Trigger",
          "description":"Triggers Rules on Events",
-         "configDescriptions":[  
-            {  
+         "visibility":"HIDDEN",
+         "configDescriptions":[
+            {
                "name":"eventTopic",
                "type":"TEXT",
                "label":"Topic",
@@ -13,7 +14,7 @@
                "required":true,
                "defaultValue":"smarthome/*"
             },
-            {  
+            {
                "name":"eventSource",
                "type":"TEXT",
                "label":"Source",
@@ -21,7 +22,7 @@
                "required":true,
                "defaultValue":""
             },
-            {  
+            {
                "name":"eventTypes",
                "type":"TEXT",
                "label":"Event Type",
@@ -30,8 +31,8 @@
                "defaultValue":""
             }
          ],
-         "outputs":[  
-            {  
+         "outputs":[
+            {
                "name":"event",
                "type":"org.eclipse.smarthome.core.events.Event",
                "label":"Event",
@@ -40,12 +41,47 @@
             }
          ]
       },
-      {  
+      {
+         "uid":"ItemStateUpdateTrigger",
+         "label":"Item State Update Trigger",
+         "description":"This triggers a rule if an items state updated",
+         "configDescriptions":[
+            {
+               "name":"itemName",
+               "type":"TEXT",
+               "context":"item",
+               "label":"item name",
+               "description":"the name of the item which's state update should be observed",
+               "required":true
+            }
+         ],
+         "children":[
+            {
+               "id":"itemStateUpdateTriggerID",
+               "type":"GenericEventTrigger",
+               "configuration":{
+                  "eventSource":"$itemName",
+                  "eventTopic":"smarthome/items/*",
+                  "eventTypes":"ItemStateEvent"
+               }
+            }
+         ],
+         "outputs":[
+            {
+               "name":"event",
+               "type":"org.eclipse.smarthome.core.events.Event",
+               "description":"the event of the item state update",
+               "label":"Event",
+               "reference":"itemStateUpdateTriggerID.event"
+            }
+         ]
+      },
+      {
          "uid":"ItemStateChangeTrigger",
-         "label":"Item State Trigger",
+         "label":"Item State Change Trigger",
          "description":"This triggers a rule if an items state changed",
-         "configDescriptions":[  
-            {  
+         "configDescriptions":[
+            {
                "name":"itemName",
                "type":"TEXT",
                "context":"item",
@@ -54,24 +90,59 @@
                "required":true
             }
          ],
-         "children":[  
-            {  
+         "children":[
+            {
                "id":"itemStateChangeTriggerID",
                "type":"GenericEventTrigger",
-               "configuration":{  
+               "configuration":{
                   "eventSource":"$itemName",
-                  "eventTopic":"smarthome/items/*",
-                  "eventTypes":"ItemStateEvent"
+                  "eventTopic":"smarthome/items/${itemName}/state",
+                  "eventTypes":"ItemStateChangedEvent"
                }
             }
          ],
-         "outputs":[  
-            {  
+         "outputs":[
+            {
                "name":"event",
                "type":"org.eclipse.smarthome.core.events.Event",
                "description":"the event of the item state change",
-               "label":"event",
+               "label":"Event",
                "reference":"itemStateChangeTriggerID.event"
+            }
+         ]
+      },
+      {
+         "uid":"ChannelEventTrigger",
+         "label":"Channel Trigger",
+         "description":"This triggers a rule if a channel emits a trigger",
+         "configDescriptions":[
+            {
+               "name":"channelUID",
+               "type":"TEXT",
+               "context":"channel",
+               "label":"Channel",
+               "description":"the id of the channel which should be observed for triggers",
+               "required":true
+            }
+         ],
+         "children":[
+            {
+               "id":"channelEventTriggerId",
+               "type":"GenericEventTrigger",
+               "configuration":{
+                  "eventSource":"$channelUID",
+                  "eventTopic":"smarthome/channels/*/triggered",
+                  "eventTypes":"ChannelTriggeredEvent"
+               }
+            }
+         ],
+         "outputs":[
+            {
+               "name":"event",
+               "type":"org.eclipse.smarthome.core.events.Event",
+               "description":"the event of the channel trigger",
+               "label":"Event",
+               "reference":"channelEventTriggerId.event"
             }
          ]
       }

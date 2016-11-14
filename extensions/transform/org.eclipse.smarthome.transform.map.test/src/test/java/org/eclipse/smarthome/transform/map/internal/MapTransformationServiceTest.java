@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2016 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -13,6 +13,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.Locale;
 import java.util.Properties;
 import java.util.concurrent.Callable;
 
@@ -44,6 +45,11 @@ public class MapTransformationServiceTest {
             @Override
             protected String getSourcePath() {
                 return BASE_FOLDER + File.separator + super.getSourcePath();
+            }
+
+            @Override
+            protected Locale getLocale() {
+                return Locale.US;
             }
         };
         FileUtils.deleteDirectory(new File(CONFIG_FOLDER));

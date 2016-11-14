@@ -4,12 +4,12 @@
   <groupId>org.eclipse.smarthome.core</groupId>
   <artifactId>org.eclipse.smarthome.core.thing.test</artifactId>
   <packaging>eclipse-test-plugin</packaging>
-  <version>0.8.0-SNAPSHOT</version>
+  <version>0.9.0-SNAPSHOT</version>
   <name>Eclipse SmartHome Thing Tests</name>
   <parent>
     <groupId>org.eclipse.smarthome.bundles</groupId>
     <artifactId>core</artifactId>
-    <version>0.8.0-SNAPSHOT</version>
+    <version>0.9.0-SNAPSHOT</version>
   </parent>
 
 
@@ -34,7 +34,27 @@
               </requirement>
               <requirement>
                 <type>eclipse-plugin</type>
+                <id>org.eclipse.equinox.cm</id>
+                <versionRange>0.0.0</versionRange>
+              </requirement>
+              <requirement>
+                <type>eclipse-plugin</type>
                 <id>org.eclipse.equinox.event</id>
+                <versionRange>0.0.0</versionRange>
+              </requirement>
+              <requirement>
+                <type>eclipse-plugin</type>
+                <id>ch.qos.logback.classic</id>
+                <versionRange>0.0.0</versionRange>
+              </requirement>
+              <requirement>
+                <type>eclipse-plugin</type>
+                <id>ch.qos.logback.core</id>
+                <versionRange>0.0.0</versionRange>
+              </requirement>
+              <requirement>
+                <type>eclipse-plugin</type>
+                <id>ch.qos.logback.slf4j</id>
                 <versionRange>0.0.0</versionRange>
               </requirement>
             </extraRequirements>
@@ -52,6 +72,11 @@
               <autoStart>true</autoStart>
             </bundle>
             <bundle>
+              <id>org.eclipse.equinox.cm</id>
+              <level>1</level>
+              <autoStart>true</autoStart>
+            </bundle>
+            <bundle>
               <id>org.eclipse.equinox.event</id>
               <level>2</level>
               <autoStart>true</autoStart>
@@ -59,6 +84,21 @@
             <bundle>
               <id>org.eclipse.smarthome.core</id>
               <level>3</level>
+              <autoStart>true</autoStart>
+            </bundle>
+            <bundle>
+              <id>org.eclipse.smarthome.config.core</id>
+              <level>4</level>
+              <autoStart>true</autoStart>
+            </bundle>
+            <bundle>
+              <id>org.eclipse.smarthome.config.xml</id>
+              <level>4</level>
+              <autoStart>true</autoStart>
+            </bundle>
+            <bundle>
+              <id>org.eclipse.smarthome.core.autoupdate</id>
+              <level>4</level>
               <autoStart>true</autoStart>
             </bundle>
           </bundleStartLevel>

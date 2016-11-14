@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2016 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -25,7 +25,10 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.net.ntp.NTPUDPClient;
 import org.apache.commons.net.ntp.TimeInfo;
 import org.eclipse.smarthome.config.core.Configuration;
+import org.eclipse.smarthome.core.i18n.LocaleProvider;
 import org.eclipse.smarthome.core.library.types.DateTimeType;
+import org.eclipse.smarthome.core.library.types.StringType;
+import org.eclipse.smarthome.core.thing.Channel;
 import org.eclipse.smarthome.core.thing.ChannelUID;
 import org.eclipse.smarthome.core.thing.Thing;
 import org.eclipse.smarthome.core.thing.ThingStatus;
@@ -45,6 +48,7 @@ import org.slf4j.LoggerFactory;
  *
  * @author Marcel Verpaalen - Initial contribution OH2 ntp binding
  * @author Thomas.Eichstaedt-Engelen OH1 ntp binding (getTime routine)
+ * @author Markus Rathgeb - Add locale provider
  */
 
 public class NtpHandler extends BaseThingHandler {
@@ -52,10 +56,17 @@ public class NtpHandler extends BaseThingHandler {
     private Logger logger = LoggerFactory.getLogger(NtpHandler.class);
 
     /** timeout for requests to the NTP server */
-    private static final int NTP_TIMEOUT = 5000;
+    private static final int NTP_TIMEOUT = 10000;
+
+    public static final String DATE_PATTERN_WITH_TZ = "yyyy-MM-dd HH:mm:ss z";
 
     /** for logging purposes */
-    private final DateFormat SDF = SimpleDateFormat.getDateTimeInstance(SimpleDateFormat.FULL, SimpleDateFormat.FULL);
+    private final DateFormat SDF = new SimpleDateFormat(DATE_PATTERN_WITH_TZ);
+
+    /** for publish purposes */
+    private DateFormat dateTimeFormat = new SimpleDateFormat(DATE_PATTERN_WITH_TZ);
+
+    private final LocaleProvider localeProvider;
 
     ScheduledFuture<?> refreshJob;
 
@@ -76,9 +87,11 @@ public class NtpHandler extends BaseThingHandler {
     private long timeOffset;
 
     private ChannelUID dateTimeChannelUID;
+    private ChannelUID stringChannelUID;
 
-    public NtpHandler(Thing thing) {
+    public NtpHandler(final Thing thing, final LocaleProvider localeProvider) {
         super(thing);
+        this.localeProvider = localeProvider;
     }
 
     @Override
@@ -92,29 +105,50 @@ public class NtpHandler extends BaseThingHandler {
     public void initialize() {
 
         try {
-            logger.debug("Initializing NTP handler for '{}'.", getThing().getUID());
+            logger.debug("Initializing NTP handler for '{}'.", getThing().getUID().toString());
 
             Configuration config = getThing().getConfiguration();
-            this.hostname = (String) config.get(PROPERTY_NTP_SERVER);
-            this.refreshInterval = (BigDecimal) config.get(PROPERTY_REFRESH_INTERVAL);
-            this.refreshNtp = (BigDecimal) config.get(PROPERTY_REFRESH_NTP);
-            this.refreshNtpCount = 0;
+            hostname = (String) config.get(PROPERTY_NTP_SERVER);
+            refreshInterval = (BigDecimal) config.get(PROPERTY_REFRESH_INTERVAL);
+            refreshNtp = (BigDecimal) config.get(PROPERTY_REFRESH_NTP);
+            refreshNtpCount = 0;
 
             try {
                 timeZone = TimeZone.getTimeZone((String) config.get(PROPERTY_TIMEZONE));
             } catch (Exception e) {
                 timeZone = TimeZone.getDefault();
-                logger.debug("using default TZ: {}", timeZone);
+                logger.debug("{} using default TZ: {}", getThing().getUID().toString(), timeZone);
             }
 
             try {
                 String localeString = (String) config.get(PROPERTY_LOCALE);
                 locale = new Locale(localeString);
             } catch (Exception e) {
-                locale = Locale.getDefault();
-                logger.debug("using default locale: {}", locale);
+                locale = localeProvider.getLocale();
+                logger.debug("{} using default locale: {}", getThing().getUID().toString(), locale);
             }
             dateTimeChannelUID = new ChannelUID(getThing().getUID(), CHANNEL_DATE_TIME);
+            stringChannelUID = new ChannelUID(getThing().getUID(), CHANNEL_STRING);
+            try {
+                Channel stringChannel = getThing().getChannel(stringChannelUID.getId());
+                Configuration cfg = stringChannel.getConfiguration();
+                String dateTimeFormatString = (String) cfg.get(PROPERTY_DATE_TIME_FORMAT);
+                if (!(dateTimeFormatString == null || dateTimeFormatString.isEmpty())) {
+                    dateTimeFormat = new SimpleDateFormat(dateTimeFormatString);
+                    logger.debug("Could not format {} with DateFormat '{}', using default format.",
+                            getThing().getUID().toString(), dateTimeFormatString);
+                }
+            } catch (Exception ex) {
+                logger.debug("No channel config or invalid format for {}. Using default format. ({})", stringChannelUID,
+                        ex.getMessage());
+                dateTimeFormat = new SimpleDateFormat(DATE_PATTERN_WITH_TZ);
+            }
+            SDF.setTimeZone(timeZone);
+            dateTimeFormat.setTimeZone(timeZone);
+
+            logger.debug(
+                    "Initialized NTP handler '{}' with configuration: host '{}', refresh interval {}, timezone {}, locale {}.",
+                    getThing().getUID().toString(), hostname, refreshInterval, timeZone, locale);
             startAutomaticRefresh();
 
         } catch (Exception ex) {
@@ -152,7 +186,7 @@ public class NtpHandler extends BaseThingHandler {
         if (refreshNtpCount <= 0) {
             networkTimeInMillis = getTime(hostname);
             timeOffset = networkTimeInMillis - System.currentTimeMillis();
-            logger.debug("delta system time: {}", timeOffset);
+            logger.debug("{} delta system time: {}", getThing().getUID().toString(), timeOffset);
             refreshNtpCount = refreshNtp.intValue();
         } else {
             networkTimeInMillis = System.currentTimeMillis() + timeOffset;
@@ -163,12 +197,13 @@ public class NtpHandler extends BaseThingHandler {
         calendar.setTimeInMillis(networkTimeInMillis);
 
         updateState(dateTimeChannelUID, new DateTimeType(calendar));
+        updateState(stringChannelUID, new StringType(dateTimeFormat.format(calendar.getTime())));
     }
 
     /**
      * Queries the given timeserver <code>hostname</code> and returns the time
      * in milliseconds.
-     * 
+     *
      * @param hostname
      *            the timeserver to query
      * @return the time in milliseconds or the current time of the system if an
@@ -182,17 +217,18 @@ public class NtpHandler extends BaseThingHandler {
             InetAddress inetAddress = InetAddress.getByName(hostname);
             TimeInfo timeInfo = timeClient.getTime(inetAddress);
 
-            logger.debug("Got time update from: {}", hostname, SDF.format(new Date(timeInfo.getReturnTime())));
+            logger.debug("{} Got time update from: {} : {}", getThing().getUID().toString(), hostname,
+                    SDF.format(new Date(timeInfo.getReturnTime())));
             updateStatus(ThingStatus.ONLINE, ThingStatusDetail.NONE);
             return timeInfo.getReturnTime();
         } catch (UnknownHostException uhe) {
-            String msg = "the given hostname '" + hostname
-                    + "' of the timeserver is unknown -> returning current sytem time instead";
+            String msg = getThing().getUID().toString() + " the given hostname '" + hostname
+                    + "' of the timeserver is unknown -> returning current sytem time instead.";
             logger.warn(msg);
             updateStatus(ThingStatus.ONLINE, ThingStatusDetail.COMMUNICATION_ERROR, msg);
         } catch (IOException ioe) {
-            String msg = "couldn't establish network connection [host '" + hostname
-                    + "'] -> returning current sytem time instead";
+            String msg = getThing().getUID().toString() + " couldn't establish network connection [host '" + hostname
+                    + "'] -> returning current sytem time instead.";
             logger.warn(msg);
             updateStatus(ThingStatus.ONLINE, ThingStatusDetail.COMMUNICATION_ERROR, msg);
         }

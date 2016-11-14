@@ -22,7 +22,7 @@ The binding is able to auto-discover all bulbs in a network over the LIFX UDP pr
 
 ## Thing Configuration
 
-Each bulb needs the device ID as configuration parameter. The device ID is printed as serial number on the bulb and can also be found within the native LIFX Android or iOS application. But usually the discovery works quite reliable, so that a manual configuration is not needed.
+Each bulb needs the device ID as a configuration parameter. The device ID is printed as a serial number on the bulb and can also be found within the native LIFX Android or iOS application. But usually the discovery works quite reliably, so that a manual configuration is not needed.
 
 However, in the thing file, a manual configuration looks e.g. like
 
@@ -42,16 +42,19 @@ The bulb only supports the color channel:
 ## Full Example
 
 demo.things:
+
 ```
 Thing lifx:light:light1 [ deviceId="D073D5010E20" ]
 ```
 
 demo.items:
+
 ```
 Color Light { channel="lifx:light:light1:color" }
 ```
 
 demo.sitemap:
+
 ```
 sitemap demo label="Main Menu"
 {

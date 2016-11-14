@@ -16,16 +16,10 @@
 			<p>Configure your UI preferences.</p>
 
 			<form class="form" role="form">
-				<div class="form-group">
+				<div class="form-group col-sm-6 col-xs-12 language">
 					<md-select placeholder="Language" ng-model="language"> <md-option value="en">English</md-option> <md-option value="de">German</md-option> </md-select>
 					<p class="hint">
 						<small>Configure language for Binding texts (UI is not localized yet)</small>
-					</p>
-				</div>
-				<div class="form-group">
-					<md-checkbox ng-model="advancedMode">Advanced Mode</md-checkbox>
-					<p class="hint">
-						<small>When using advanced mode mode channels will not be enabled automatically.</small>
 					</p>
 				</div>
 			</form>

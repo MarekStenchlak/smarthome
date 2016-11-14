@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-15 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2016 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -11,10 +11,9 @@ import static org.hamcrest.CoreMatchers.*
 import static org.junit.Assert.*
 import static org.junit.matchers.JUnitMatchers.*
 
+import java.util.concurrent.ConcurrentHashMap
+
 import org.eclipse.smarthome.config.core.Configuration
-import org.eclipse.smarthome.core.items.ActiveItem
-import org.eclipse.smarthome.core.items.GroupItem
-import org.eclipse.smarthome.core.items.Item
 import org.eclipse.smarthome.core.items.ItemRegistry
 import org.eclipse.smarthome.core.thing.Channel
 import org.eclipse.smarthome.core.thing.ChannelUID
@@ -29,8 +28,6 @@ import org.eclipse.smarthome.core.thing.binding.ThingHandler
 import org.eclipse.smarthome.core.thing.binding.ThingHandlerFactory
 import org.eclipse.smarthome.core.thing.binding.ThingTypeProvider
 import org.eclipse.smarthome.core.thing.link.ItemChannelLinkRegistry
-import org.eclipse.smarthome.core.thing.link.ItemThingLinkRegistry
-import org.eclipse.smarthome.core.thing.setup.ThingSetupManager
 import org.eclipse.smarthome.core.thing.type.ChannelDefinition
 import org.eclipse.smarthome.core.thing.type.ChannelType
 import org.eclipse.smarthome.core.thing.type.ChannelTypeProvider
@@ -42,38 +39,42 @@ import org.eclipse.smarthome.core.types.StateOption
 import org.eclipse.smarthome.test.OSGiTest
 import org.junit.After
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Test
 import org.osgi.service.component.ComponentContext
 
 /**
  *
- * These tests will check (un-)linking of items and things, or items and channels managed
+ * These tests will check (un-)linking of items and channels managed
  * by {@link ThingLinkManager}.
  *
  * @author Alex Tugarev - Initial contribution
  * @author Dennis Nobel - Added test for bug 459628 (lifecycle problem)
  * @author Thomas Höfer - Thing type constructor modified because of thing properties introduction
+ * @author Kai Kreuzer - Adapted to new service implementation
  */
-class ThingLinkManagerOSGiTest extends OSGiTest{
+class ThingLinkManagerOSGiTest extends OSGiTest {
 
     def ThingRegistry thingRegistry
-    def ThingSetupManager thingSetupManager
+    def ManagedThingProvider managedThingProvider
     def ItemRegistry itemRegistry
+    def ItemChannelLinkRegistry itemChannelLinkRegistry
 
-    public static Map context = new HashMap<>()
+    private Map<String,Object> context = new ConcurrentHashMap<>()
 
     @Before
     void setup() {
         context.clear();
 
         registerVolatileStorageService()
-        itemRegistry = getService(ItemRegistry)
         thingRegistry = getService(ThingRegistry)
+        managedThingProvider = getService(ManagedThingProvider)
+        itemRegistry = getService(ItemRegistry)
+        assertNotNull(itemRegistry)
+        itemChannelLinkRegistry = getService(ItemChannelLinkRegistry)
         assertThat thingRegistry, is(notNullValue())
 
         def ComponentContext componentContext = [
-            getBundleContext: { -> bundleContext}
+            getBundleContext: { -> bundleContext }
         ] as ComponentContext
 
         def thingHandlerFactory = new TestThingHandlerFactory()
@@ -95,9 +96,6 @@ class ThingLinkManagerOSGiTest extends OSGiTest{
 
         def thingTypeProvider = new TestThingTypeProvider([new ThingType(new ThingTypeUID("hue:lamp"), null, " ", null, [new ChannelDefinition("1", channelType.UID)], null, null, null)])
         registerService(thingTypeProvider)
-
-        thingSetupManager = getService(ThingSetupManager)
-        assertThat thingSetupManager, is(notNullValue())
     }
 
     @After
@@ -106,115 +104,63 @@ class ThingLinkManagerOSGiTest extends OSGiTest{
         managedThingProvider.getAll().each {
             managedThingProvider.remove(it.getUID())
         }
-    }
-
-    @Test
-    void 'assert that items are linked to thing and channel'() {
-        ThingUID thingUID = new ThingUID("hue:lamp:lamp1")
-        thingSetupManager.addThing(thingUID, new Configuration(), /* bridge */ null)
-
-        Thing thing = thingRegistry.get(thingUID)
-        assertThat thing, is(notNullValue())
-
-        GroupItem linkedGroupItem = thing.getLinkedItem()
-        assertThat linkedGroupItem, is(notNullValue())
-        assertThat linkedGroupItem.getName(), is("hue_lamp_lamp1")
-
-        def channels = thing.getChannels()
-        assertThat channels.size(), is(1)
-        Channel channel = channels.first()
-
-        def linkedItems = channel.getLinkedItems()
-        assertThat linkedItems.size(), is(1)
-        Item item = linkedItems.first()
-        assertThat item.getName(), is("hue_lamp_lamp1_1")
-    }
-
-    @Test
-    void 'assert that items are unlinked'() {
-        ThingUID thingUID = new ThingUID("hue:lamp:lamp1")
-        thingSetupManager.addThing(thingUID, new Configuration(), /* bridge */ null)
-
-        Thing thing = thingRegistry.get(thingUID)
-        assertThat thing, is(notNullValue())
-
-        thingSetupManager.removeThing(thingUID, true)
-
-        GroupItem linkedGroupItem = thing.getLinkedItem()
-        assertThat linkedGroupItem, is(null)
-
-        def channels = thing.getChannels()
-        assertThat channels.size(), is(1)
-        Channel channel = channels.first()
-
-        def linkedItems = channel.getLinkedItems()
-        assertThat linkedItems.size(), is(0)
-    }
-
-    @Test
-    void 'assert that existing things are linked'() {
-        def componentContext = [getBundleContext: {getBundleContext()}] as ComponentContext
-        def thingManger = new ThingManager()
-        try {
-            ThingUID thingUID = new ThingUID("hue:lamp:lamp1")
-            thingSetupManager.addThing(thingUID, new Configuration(), /* bridge */ null)
-
-            Thing thing = thingRegistry.get(thingUID)
-            assertThat thing, is(notNullValue())
-
-            // create thing manager manually to simulate start up of declarative service
-            thingManger.setItemRegistry(getService(ItemRegistry))
-            thingManger.setThingRegistry(getService(ThingRegistry))
-            thingManger.setItemChannelLinkRegistry(getService(ItemChannelLinkRegistry))
-            thingManger.setItemThingLinkRegistry(getService(ItemThingLinkRegistry))
-            thingManger.activate(componentContext)
-
-            def channels = thing.getChannels()
-            assertThat channels.size(), is(1)
-            Channel channel = channels.first()
-
-            def linkedItems = channel.getLinkedItems()
-            assertThat linkedItems.size(), is(1)
-        } finally {
-            thingManger.deactivate(componentContext)
+        itemChannelLinkRegistry.getAll().each {
+            itemChannelLinkRegistry.remove(it.ID)
         }
     }
 
     @Test
-    @Ignore("For some strange reason it fails. But it seems to a problem in the test, not in the runtime.")
+    void 'assert that links are removed upon thing removal'() {
+        ThingUID thingUID = new ThingUID("hue:lamp:lamp1")
+        Thing thing = thingRegistry.createThingOfType(new ThingTypeUID("hue:lamp"), thingUID, null, "test thing", new Configuration())
+
+        def channels = thing.getChannels()
+        assertThat channels.size(), is(1)
+        Channel channel = channels.first()
+
+        managedThingProvider.add(thing)
+        waitForAssert {
+            assertThat itemChannelLinkRegistry.getLinkedItems(channel.getUID()).size(), is(1)
+        }
+
+        managedThingProvider.remove(thingUID)
+        waitForAssert {
+            assertThat itemChannelLinkRegistry.getLinkedItems(channel.getUID()).size(), is(0)
+        }
+    }
+
+
+    @Test
     void 'assert that channelLinked and channelUnlinked at ThingHandler is called'() {
         ThingUID thingUID = new ThingUID("hue:lamp:lamp1")
-        thingSetupManager.addThing(thingUID, new Configuration(), /* bridge */ null)
+        Thing thing = thingRegistry.createThingOfType(new ThingTypeUID("hue:lamp"), thingUID, null, "test thing", new Configuration())
+        managedThingProvider.add(thing)
 
         def channelUID = new ChannelUID(thingUID, "1")
 
-        assertThat context.get("linkedChannel"), is(equalTo(channelUID))
-        assertThat context.get("unlinkedChannel"), is(null)
+        waitForAssert {
+            assertThat takeContext("linkedChannel"), is(equalTo(channelUID))
+            assertThat takeContext("unlinkedChannel"), is(null)
+        }
 
-        thingSetupManager.disableChannel(channelUID)
+        itemChannelLinkRegistry.removeLinksForThing(thingUID)
 
-        assertThat context.get("unlinkedChannel"), is(equalTo(channelUID))
+        waitForAssert {
+            assertThat takeContext("unlinkedChannel"), is(equalTo(channelUID))
+        }
     }
 
-    @Test
-    void 'assert that item update for items which are linked to things works'() {
-
-        ThingUID thingUID = new ThingUID("hue:lamp:lamp1")
-        def thing = thingSetupManager.addThing(thingUID, new Configuration(), /* bridge */ null)
-
-        def linkedItem = thing.getLinkedItem()
-
-        def linkedItemName = linkedItem.name
-        ActiveItem item = itemRegistry.get(linkedItemName)
-
-        GroupItem itemToUpdate = new GroupItem(item.getName())
-        itemToUpdate.setLabel("anotherLabel")
-
-        itemRegistry.update(itemToUpdate)
-
-        assertThat thing.getLinkedItem().label, is(equalTo("anotherLabel"))
+    private Object takeContext(final String key) {
+        final Object obj = context.remove(key)
+        println "take from context: " + key + "=" + obj
+        return obj
     }
 
+    private Object putContext(final String key, final Object value) {
+        final Object old = context.put(key, value);
+        println "put to context: " + key + "=" + value + " [old: " + old + "]"
+        return old
+    }
 
     /*
      * Helper
@@ -230,12 +176,15 @@ class ThingLinkManagerOSGiTest extends OSGiTest{
         protected ThingHandler createHandler(Thing thing) {
             return new BaseThingHandler(thing) {
                         public void handleCommand(ChannelUID channelUID, Command command) { }
+
                         void channelLinked(ChannelUID channelUID) {
-                            context.put("linkedChannel", channelUID)
-                        };
+                            putContext("linkedChannel", channelUID)
+                        }
+
                         void channelUnlinked(ChannelUID channelUID) {
-                            context.put("unlinkedChannel", channelUID)
-                        };
+                            println "Cannel unlinked: " + channelUID
+                            putContext("unlinkedChannel", channelUID)
+                        }
                     }
         }
     }

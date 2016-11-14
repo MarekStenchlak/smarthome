@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2016 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -24,6 +24,7 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
+import java.util.ConcurrentModificationException;
 import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.List;
@@ -63,6 +64,7 @@ import org.eclipse.smarthome.core.thing.ThingStatus;
 import org.eclipse.smarthome.core.thing.ThingStatusDetail;
 import org.eclipse.smarthome.core.thing.binding.BaseThingHandler;
 import org.eclipse.smarthome.core.types.Command;
+import org.eclipse.smarthome.core.types.RefreshType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -73,6 +75,7 @@ import org.slf4j.LoggerFactory;
  * @author Dennis Nobel - Initial contribution
  * @author Stefan Bußweiler - Added new thing status handling
  * @author Karel Goderis - Rewrite for Firmware V2, and remove dependency on external libraries
+ * @author Kai Kreuzer - Added configurable transition time and small fixes
  */
 public class LifxLightHandler extends BaseThingHandler {
 
@@ -83,13 +86,14 @@ public class LifxLightHandler extends BaseThingHandler {
     private static long NETWORK_INTERVAL = 50;
     private static int ECHO_POLLING_INTERVAL = 15;
     private static int STATE_POLLING_INTERVAL = 3;
-    private static int MAXIMUM_POLLING_RETRIES = 2;
+    private static int MAXIMUM_POLLING_RETRIES = 4;
     private static int lightCounter = 1;
-    private static ReentrantLock lighCounterLock = new ReentrantLock();
+    private static ReentrantLock lightCounterLock = new ReentrantLock();
 
     private long source;
     private int service;
     private int port;
+    private long fadeTime = 300L;
     private MACAddress macAddress = null;
     private MACAddress broadcastAddress = new MACAddress("000000000000", true);
     private int sequenceNumber = 1;
@@ -118,38 +122,58 @@ public class LifxLightHandler extends BaseThingHandler {
 
     @Override
     public void dispose() {
-        if (networkJob != null && !networkJob.isCancelled()) {
-            networkJob.cancel(true);
-            networkJob = null;
-        }
-
-        currentColorState = null;
-        currentPowerState = null;
-
         try {
-            if (selector != null) {
-                selector.close();
-            }
-        } catch (IOException e) {
-            logger.warn("An exception occurred while closing the selector : '{}'", e.getMessage());
-        }
+            lock.lock();
 
-        if (broadcastKey != null) {
-            try {
-                broadcastKey.channel().close();
-            } catch (IOException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
+            if (networkJob != null && !networkJob.isCancelled()) {
+                networkJob.cancel(true);
+                networkJob = null;
             }
-        }
 
-        if (unicastKey != null) {
+            currentColorState = null;
+            currentPowerState = null;
+
             try {
-                unicastKey.channel().close();
+                if (selector != null) {
+
+                    selector.wakeup();
+
+                    boolean isContinue = true;
+                    while (isContinue) {
+                        try {
+                            for (SelectionKey selectionKey : selector.keys()) {
+                                selectionKey.channel().close();
+                                selectionKey.cancel();
+                            }
+                            isContinue = false; // continue till all keys are cancelled
+                        } catch (ConcurrentModificationException e) {
+                            logger.warn("An exception occurred while closing a selector key : '{}'", e.getMessage());
+                        }
+                    }
+
+                    selector.close();
+                }
             } catch (IOException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
+                logger.warn("An exception occurred while closing the selector : '{}'", e.getMessage());
             }
+
+            if (broadcastKey != null) {
+                try {
+                    broadcastKey.channel().close();
+                } catch (IOException e) {
+                    logger.warn("An exception occurred while closing the broadcast channel : '{}'", e.getMessage());
+                }
+            }
+
+            if (unicastKey != null) {
+                try {
+                    unicastKey.channel().close();
+                } catch (IOException e) {
+                    logger.warn("An exception occurred while closing the unicast channel : '{}'", e.getMessage());
+                }
+            }
+        } finally {
+            lock.unlock();
         }
 
     }
@@ -157,8 +181,20 @@ public class LifxLightHandler extends BaseThingHandler {
     @Override
     public void initialize() {
         try {
+
+            lock.lock();
+
             macAddress = new MACAddress((String) getConfig().get(LifxBindingConstants.CONFIG_PROPERTY_DEVICE_ID), true);
             logger.debug("Initializing the LIFX handler for bulb '{}'.", this.macAddress.getHex());
+
+            Object fadeCfg = getConfig().get(LifxBindingConstants.CONFIG_PROPERTY_FADETIME);
+            if (fadeCfg != null) {
+                try {
+                    fadeTime = Long.parseLong(fadeCfg.toString());
+                } catch (NumberFormatException e) {
+                    logger.warn("Invalid value '{}' for transition time, using default instead.", fadeCfg.toString());
+                }
+            }
 
             if (networkJob == null || networkJob.isCancelled()) {
                 networkJob = scheduler.scheduleWithFixedDelay(networkRunnable, 0, NETWORK_INTERVAL,
@@ -197,12 +233,20 @@ public class LifxLightHandler extends BaseThingHandler {
                     .setOption(StandardSocketOptions.SO_REUSEADDR, true)
                     .setOption(StandardSocketOptions.SO_BROADCAST, true);
             broadcastChannel.configureBlocking(false);
-            lighCounterLock.lock();
-            logger.debug("Binding the broadcast channel on port {}", BROADCAST_PORT + lightCounter);
-            broadcastChannel.bind(new InetSocketAddress(BROADCAST_PORT + lightCounter));
-            lightCounter++;
-            lighCounterLock.unlock();
+
+            try {
+                lightCounterLock.lock();
+                logger.debug("Binding the broadcast channel on port {}", BROADCAST_PORT + lightCounter);
+                broadcastChannel.bind(new InetSocketAddress(BROADCAST_PORT + lightCounter));
+                lightCounter++;
+            } finally {
+                lightCounterLock.unlock();
+            }
+
             broadcastKey = broadcastChannel.register(selector, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
+
+            updateStatus(ThingStatus.OFFLINE);
+            sentPackets.clear();
 
             // look for lights on the network
             GetServiceRequest packet = new GetServiceRequest();
@@ -210,48 +254,79 @@ public class LifxLightHandler extends BaseThingHandler {
 
         } catch (Exception ex) {
             logger.error("Error occured while initializing LIFX handler: " + ex.getMessage(), ex);
+        } finally {
+            lock.unlock();
         }
     }
 
     @Override
     public void handleCommand(ChannelUID channelUID, Command command) {
 
-        try {
-            switch (channelUID.getId()) {
-                case CHANNEL_COLOR:
-                    if (command instanceof HSBType) {
-                        handleHSBCommand((HSBType) command);
-                        return;
-                    }
-                case CHANNEL_BRIGHTNESS:
-                    if (command instanceof PercentType) {
-                        handlePercentCommand((PercentType) command);
-                    } else if (command instanceof OnOffType) {
-                        handleOnOffCommand((OnOffType) command);
-                    } else if (command instanceof IncreaseDecreaseType) {
-                        handleIncreaseDecreaseCommand((IncreaseDecreaseType) command);
-                    }
-                    break;
-                case CHANNEL_TEMPERATURE:
-                    if (command instanceof PercentType) {
-                        handleTemperatureCommand((PercentType) command);
-                    } else if (command instanceof IncreaseDecreaseType) {
-                        handleIncreaseDecreaseTemperatureCommand((IncreaseDecreaseType) command);
-                    }
-                    break;
-                default:
-                    break;
+        if (command instanceof RefreshType) {
+            GetLightPowerRequest powerPacket = new GetLightPowerRequest();
+            GetRequest colorPacket = new GetRequest();
+
+            try {
+                switch (channelUID.getId()) {
+                    case CHANNEL_COLOR:
+                    case CHANNEL_BRIGHTNESS:
+                        sendPacket(powerPacket);
+                        sendPacket(colorPacket);
+                        break;
+                    case CHANNEL_TEMPERATURE:
+                        sendPacket(colorPacket);
+                        break;
+                    default:
+                        break;
+                }
+            } catch (Exception ex) {
+                logger.error("Error while refreshing a channel for the bulb: {}", ex.getMessage(), ex);
             }
-        } catch (Exception ex) {
-            logger.error("Error while updating bulb: {}", ex.getMessage(), ex);
+        } else {
+            try {
+                switch (channelUID.getId()) {
+                    case CHANNEL_COLOR:
+                        if (command instanceof HSBType) {
+                            handleHSBCommand((HSBType) command);
+                            return;
+                        } else if (command instanceof PercentType) {
+                            handlePercentCommand((PercentType) command);
+                        } else if (command instanceof OnOffType) {
+                            handleColorOnOffCommand((OnOffType) command);
+                        } else if (command instanceof IncreaseDecreaseType) {
+                            handleIncreaseDecreaseCommand((IncreaseDecreaseType) command);
+                        }
+                        break;
+                    case CHANNEL_BRIGHTNESS:
+                        if (command instanceof PercentType) {
+                            handlePercentCommand((PercentType) command);
+                        } else if (command instanceof OnOffType) {
+                            handleBrightnessOnOffCommand((OnOffType) command);
+                        } else if (command instanceof IncreaseDecreaseType) {
+                            handleIncreaseDecreaseCommand((IncreaseDecreaseType) command);
+                        }
+                        break;
+                    case CHANNEL_TEMPERATURE:
+                        if (command instanceof PercentType) {
+                            handleTemperatureCommand((PercentType) command);
+                        } else if (command instanceof IncreaseDecreaseType) {
+                            handleIncreaseDecreaseTemperatureCommand((IncreaseDecreaseType) command);
+                        }
+                        break;
+                    default:
+                        break;
+                }
+            } catch (Exception ex) {
+                logger.error("Error while updating bulb: {}", ex.getMessage(), ex);
+            }
         }
     }
 
     private void handleTemperatureCommand(PercentType temperature) {
+        logger.debug("The set temperature '{}' yields {} Kelvin", temperature, toKelvin(temperature.intValue()));
         SetColorRequest packet = new SetColorRequest((int) (currentColorState.getHue().floatValue() / 360 * 65535.0f),
-                (int) (currentColorState.getSaturation().floatValue() / 100 * 65535.0f),
-                (int) (currentColorState.getBrightness().floatValue() / 100 * 65535.0f),
-                toKelvin(temperature.intValue()), 0);
+                0, (int) (currentColorState.getBrightness().floatValue() / 100 * 65535.0f),
+                toKelvin(temperature.intValue()), fadeTime);
         packet.setResponseRequired(false);
         sendPacket(packet);
 
@@ -265,7 +340,7 @@ public class LifxLightHandler extends BaseThingHandler {
         SetColorRequest packet = new SetColorRequest((int) (hsbType.getHue().floatValue() / 360 * 65535.0f),
                 (int) (hsbType.getSaturation().floatValue() / 100 * 65535.0f),
                 (int) (hsbType.getBrightness().floatValue() / 100 * 65535.0f), toKelvin(currentTempState.intValue()),
-                0);
+                fadeTime);
         packet.setResponseRequired(false);
         sendPacket(packet);
 
@@ -292,7 +367,26 @@ public class LifxLightHandler extends BaseThingHandler {
         }
     }
 
-    private void handleOnOffCommand(OnOffType onOffType) {
+    private void handleColorOnOffCommand(OnOffType onOffType) {
+
+        if (currentColorState != null) {
+            PercentType percentType = onOffType == OnOffType.ON ? new PercentType(100) : new PercentType(0);
+            HSBType newColorState = new HSBType(currentColorState.getHue(), currentColorState.getSaturation(),
+                    percentType);
+            handleHSBCommand(newColorState);
+        }
+
+        PowerState lfxPowerState = onOffType == OnOffType.ON ? PowerState.ON : PowerState.OFF;
+        SetLightPowerRequest packet = new SetLightPowerRequest(lfxPowerState);
+        sendPacket(packet);
+
+        // the LIFX LAN protocol spec indicates that the response returned for a request would be the
+        // previous value, so we explicitely demand for the latest value
+        GetLightPowerRequest powerPacket = new GetLightPowerRequest();
+        sendPacket(powerPacket);
+    }
+
+    private void handleBrightnessOnOffCommand(OnOffType onOffType) {
         PowerState lfxPowerState = onOffType == OnOffType.ON ? PowerState.ON : PowerState.OFF;
         SetLightPowerRequest packet = new SetLightPowerRequest(lfxPowerState);
         sendPacket(packet);
@@ -363,11 +457,22 @@ public class LifxLightHandler extends BaseThingHandler {
                         logger.error("An exception occurred while selecting: {}", e.getMessage());
                     }
 
-                    Set<SelectionKey> selectedKeys = selector.selectedKeys();
-                    Iterator<SelectionKey> keyIterator = selectedKeys.iterator();
+                    Iterator<SelectionKey> keyIterator = selector.selectedKeys().iterator();
 
                     while (keyIterator.hasNext()) {
-                        SelectionKey key = keyIterator.next();
+
+                        SelectionKey key;
+
+                        try {
+                            key = keyIterator.next();
+                        } catch (ConcurrentModificationException e) {
+                            // when a StateServiceResponse packet is handled a new unicastChannel may be registered
+                            // in the selector which causes this exception, recover from it by restarting the iteration
+                            logger.debug("{} : Restarting iteration after ConcurrentModificationException",
+                                    macAddress.getHex());
+                            keyIterator = selector.selectedKeys().iterator();
+                            continue;
+                        }
 
                         if (key.isValid() && key.isAcceptable()) {
                             // a connection was accepted by a ServerSocketChannel.
@@ -438,7 +543,7 @@ public class LifxLightHandler extends BaseThingHandler {
                     }
                 }
             } catch (Exception e) {
-                logger.error("An exception orccurred while communicating with the bulb : '{}'", e.getMessage());
+                logger.error("An exception occurred while receiving a packet from the bulb : '{}'", e.getMessage());
             } finally {
                 lock.unlock();
             }
@@ -509,9 +614,9 @@ public class LifxLightHandler extends BaseThingHandler {
             }
             packet.setSequence(sequenceNumber);
 
-            LifxNetworkThrottler.lock(macAddress.getAsLabel());
+            LifxNetworkThrottler.lock(macAddress.getHex());
             sendPacket(packet, ipAddress, unicastKey);
-            LifxNetworkThrottler.unlock(macAddress.getAsLabel());
+            LifxNetworkThrottler.unlock(macAddress.getHex());
 
             sequenceNumber++;
             if (sequenceNumber > 255) {
@@ -596,12 +701,13 @@ public class LifxLightHandler extends BaseThingHandler {
                             }
                         } catch (Exception e) {
                             logger.error("An exception occurred while writing data : '{}'", e.getMessage());
+                            break;
                         }
                     }
                 }
             }
         } catch (Exception e) {
-            logger.error("An exception occurred while communicating with the bulb : '{}'", e.getMessage());
+            logger.error("An exception occurred while sending a packet to the bulb : '{}'", e.getMessage());
         } finally {
             lock.unlock();
         }
@@ -648,6 +754,7 @@ public class LifxLightHandler extends BaseThingHandler {
                         if (port == 0) {
                             logger.warn("The service with ID '{}' is currently not available", service);
                             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR);
+                            sentPackets.clear();
                         } else {
 
                             if (unicastChannel != null && unicastKey != null) {
@@ -673,6 +780,7 @@ public class LifxLightHandler extends BaseThingHandler {
                                 logger.warn("An exception occurred while connectin to the bulb's IP address : '{}'",
                                         e.getMessage());
                                 updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR);
+                                sentPackets.clear();
                                 return;
                             }
 
@@ -716,12 +824,12 @@ public class LifxLightHandler extends BaseThingHandler {
 
     private int toKelvin(int temperature) {
         // range is from 2500-9000K
-        return 9000 - (temperature * 65 + 2500);
+        return 9000 - (temperature * 65);
     }
 
     private int toPercent(int kelvin) {
         // range is from 2500-9000K
-        return 100 - ((kelvin - 2500) / 65);
+        return (kelvin - 9000) / (-65);
     }
 
     public void handleLightStatus(StateResponse packet) {
@@ -761,8 +869,7 @@ public class LifxLightHandler extends BaseThingHandler {
             updateState(CHANNEL_COLOR, currentColorState);
             updateState(CHANNEL_BRIGHTNESS, currentColorState.getBrightness());
         } else {
-            updateState(CHANNEL_COLOR,
-                    new HSBType(currentColorState.getHue(), currentColorState.getSaturation(), PercentType.HUNDRED));
+            updateState(CHANNEL_COLOR, HSBType.WHITE);
             updateState(CHANNEL_BRIGHTNESS, PercentType.HUNDRED);
         }
 

@@ -7,12 +7,11 @@
  */
 package org.eclipse.smarthome.automation.internal.core.provider;
 
-import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Dictionary;
+import java.util.HashSet;
 import java.util.Hashtable;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -20,17 +19,14 @@ import java.util.Set;
 import org.eclipse.smarthome.automation.Action;
 import org.eclipse.smarthome.automation.Condition;
 import org.eclipse.smarthome.automation.Trigger;
-import org.eclipse.smarthome.automation.internal.core.provider.i18n.ConfigDescriptionParameterI18nUtil;
 import org.eclipse.smarthome.automation.internal.core.provider.i18n.ModuleI18nUtil;
 import org.eclipse.smarthome.automation.internal.core.provider.i18n.RuleTemplateI18nUtil;
 import org.eclipse.smarthome.automation.parser.Parser;
-import org.eclipse.smarthome.automation.parser.ParsingException;
 import org.eclipse.smarthome.automation.template.RuleTemplate;
 import org.eclipse.smarthome.automation.template.Template;
 import org.eclipse.smarthome.automation.template.TemplateProvider;
 import org.eclipse.smarthome.automation.template.TemplateRegistry;
 import org.eclipse.smarthome.automation.type.ModuleType;
-import org.eclipse.smarthome.automation.type.ModuleTypeRegistry;
 import org.eclipse.smarthome.config.core.ConfigDescriptionParameter;
 import org.eclipse.smarthome.core.i18n.I18nProvider;
 import org.osgi.framework.Bundle;
@@ -62,7 +58,6 @@ public class TemplateResourceBundleProvider extends AbstractResourceBundleProvid
         implements TemplateProvider {
 
     protected TemplateRegistry templateRegistry;
-    protected ModuleTypeRegistry moduleTypeRegistry;
 
     @SuppressWarnings("rawtypes")
     private ServiceTracker tracker;
@@ -84,8 +79,7 @@ public class TemplateResourceBundleProvider extends AbstractResourceBundleProvid
         super(context);
         path = PATH + "/templates/";
         try {
-            Filter filter = bc.createFilter("(|(objectClass=" + TemplateRegistry.class.getName() + ")(objectClass="
-                    + ModuleTypeRegistry.class.getName() + "))");
+            Filter filter = bc.createFilter("(|(objectClass=" + TemplateRegistry.class.getName() + ")" + ")");
             tracker = new ServiceTracker(bc, filter, new ServiceTrackerCustomizer() {
 
                 @Override
@@ -93,8 +87,6 @@ public class TemplateResourceBundleProvider extends AbstractResourceBundleProvid
                     Object service = bc.getService(reference);
                     if (service instanceof TemplateRegistry) {
                         templateRegistry = (TemplateRegistry) service;
-                    } else {
-                        moduleTypeRegistry = (ModuleTypeRegistry) service;
                     }
                     queue.open();
                     return service;
@@ -106,10 +98,9 @@ public class TemplateResourceBundleProvider extends AbstractResourceBundleProvid
 
                 @Override
                 public void removedService(ServiceReference reference, Object service) {
-                    if (service == templateRegistry)
+                    if (service == templateRegistry) {
                         templateRegistry = null;
-                    else
-                        moduleTypeRegistry = null;
+                    }
                 }
             });
         } catch (InvalidSyntaxException notPossible) {
@@ -156,7 +147,6 @@ public class TemplateResourceBundleProvider extends AbstractResourceBundleProvid
         if (tracker != null) {
             tracker.close();
             tracker = null;
-            moduleTypeRegistry = null;
             templateRegistry = null;
         }
         if (tpReg != null) {
@@ -169,18 +159,12 @@ public class TemplateResourceBundleProvider extends AbstractResourceBundleProvid
     /**
      * @see TemplateProvider#getTemplate(java.lang.String, java.util.Locale)
      */
+    @SuppressWarnings("unchecked")
     @Override
     public <T extends Template> T getTemplate(String UID, Locale locale) {
-        Template defTemplate = null;
-        synchronized (providerPortfolio) {
-            defTemplate = providedObjectsHolder.get(UID);
+        synchronized (providedObjectsHolder) {
+            return (T) getPerLocale(providedObjectsHolder.get(UID), locale);
         }
-        if (defTemplate != null) {
-            @SuppressWarnings("unchecked")
-            T t = (T) getPerLocale(defTemplate, locale);
-            return t;
-        }
-        return null;
     }
 
     /**
@@ -190,14 +174,8 @@ public class TemplateResourceBundleProvider extends AbstractResourceBundleProvid
     public Collection<Template> getTemplates(Locale locale) {
         ArrayList<Template> templatesList = new ArrayList<Template>();
         synchronized (providedObjectsHolder) {
-            Iterator<Template> i = providedObjectsHolder.values().iterator();
-            while (i.hasNext()) {
-                Template defTemplate = i.next();
-                if (defTemplate != null) {
-                    Template t = getPerLocale(defTemplate, locale);
-                    if (t != null)
-                        templatesList.add(t);
-                }
+            for (Template t : providedObjectsHolder.values()) {
+                templatesList.add(getPerLocale(t, locale));
             }
         }
         return templatesList;
@@ -216,49 +194,21 @@ public class TemplateResourceBundleProvider extends AbstractResourceBundleProvid
 
     @Override
     public boolean isReady() {
-        return moduleTypeRegistry != null && templateRegistry != null && queue != null;
+        return templateRegistry != null && queue != null;
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    protected Set<Template> importData(Vendor vendor, Parser<Template> parser, InputStreamReader inputStreamReader) {
-        List<String> portfolio = null;
-        if (vendor != null) {
-            synchronized (providerPortfolio) {
-                portfolio = providerPortfolio.get(vendor);
-                if (portfolio == null) {
-                    portfolio = new ArrayList<String>();
-                    providerPortfolio.put(vendor, portfolio);
-                }
-            }
-        }
-        Set<Template> providedObjects = null;
-        try {
-            providedObjects = parser.parse(inputStreamReader);
-        } catch (ParsingException e) {
-            logger.error("Template parsing of vendor " + vendor + " is faild!", e);
-        }
-        if (providedObjects != null && !providedObjects.isEmpty()) {
-            for (Template ruleT : providedObjects) {
-                String uid = ruleT.getUID();
-                if (checkExistence(uid))
+    protected void addNewProvidedObjects(List<String> newPortfolio, Set<Template> parsedObjects) {
+        synchronized (providedObjectsHolder) {
+            for (Template parsedObject : parsedObjects) {
+                String uid = parsedObject.getUID();
+                if (providedObjectsHolder.get(uid) == null && checkExistence(uid)) {
                     continue;
-                if (portfolio != null) {
-                    portfolio.add(uid);
                 }
-                synchronized (providedObjectsHolder) {
-                    providedObjectsHolder.put(uid, ruleT);
-                }
-            }
-            Dictionary<String, Object> properties = new Hashtable<String, Object>();
-            properties.put(REG_PROPERTY_RULE_TEMPLATES, providedObjectsHolder.keySet());
-            if (tpReg == null)
-                tpReg = bc.registerService(TemplateProvider.class.getName(), this, properties);
-            else {
-                tpReg.setProperties(properties);
+                newPortfolio.add(uid);
+                providedObjectsHolder.put(uid, parsedObject);
             }
         }
-        return providedObjects;
     }
 
     /**
@@ -271,10 +221,8 @@ public class TemplateResourceBundleProvider extends AbstractResourceBundleProvid
      */
     private boolean checkExistence(String uid) {
         if (templateRegistry != null && templateRegistry.get(uid) != null) {
-            logger.error(
-                    "Rule Template with UID \"" + uid
-                            + "\" already exists! Failed to create a second with the same UID!",
-                    new IllegalArgumentException());
+            logger.error("Rule Template with UID \"{}\" already exists! Failed to create a second with the same UID!",
+                    uid, new IllegalArgumentException());
             return true;
         }
         return false;
@@ -288,8 +236,9 @@ public class TemplateResourceBundleProvider extends AbstractResourceBundleProvid
      * @return the localized {@link Template}.
      */
     private Template getPerLocale(Template defTemplate, Locale locale) {
-        if (locale == null)
+        if (locale == null || defTemplate == null) {
             return defTemplate;
+        }
         String uid = defTemplate.getUID();
         Bundle bundle = getBundle(uid);
         if (defTemplate instanceof RuleTemplate) {
@@ -297,10 +246,9 @@ public class TemplateResourceBundleProvider extends AbstractResourceBundleProvid
                     defTemplate.getLabel(), locale);
             String ldescription = RuleTemplateI18nUtil.getLocalizedRuleTemplateDescription(i18nProvider, bundle, uid,
                     defTemplate.getDescription(), locale);
-            List<ConfigDescriptionParameter> lconfigDescriptions = ConfigDescriptionParameterI18nUtil
-                    .getLocalizedConfigurationDescription(i18nProvider,
-                            ((RuleTemplate) defTemplate).getConfigurationDescription(), bundle, uid,
-                            RuleTemplateI18nUtil.RULE_TEMPLATE, locale);
+            List<ConfigDescriptionParameter> lconfigDescriptions = getLocalizedConfigurationDescription(i18nProvider,
+                    ((RuleTemplate) defTemplate).getConfigurationDescriptions(), bundle, uid,
+                    RuleTemplateI18nUtil.RULE_TEMPLATE, locale);
             List<Action> lactions = ModuleI18nUtil.getLocalizedModules(i18nProvider,
                     ((RuleTemplate) defTemplate).getActions(), bundle, uid, RuleTemplateI18nUtil.RULE_TEMPLATE, locale);
             List<Condition> lconditions = ModuleI18nUtil.getLocalizedModules(i18nProvider,
@@ -313,6 +261,20 @@ public class TemplateResourceBundleProvider extends AbstractResourceBundleProvid
                     lconditions, lactions, lconfigDescriptions, ((RuleTemplate) defTemplate).getVisibility());
         }
         return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    protected void updateProviderRegistration() {
+        Dictionary<String, Object> properties = new Hashtable<String, Object>();
+        synchronized (providedObjectsHolder) {
+            properties.put(REG_PROPERTY_RULE_TEMPLATES, new HashSet<String>(providedObjectsHolder.keySet()));
+        }
+        if (tpReg == null) {
+            tpReg = bc.registerService(TemplateProvider.class.getName(), this, properties);
+        } else {
+            tpReg.setProperties(properties);
+        }
     }
 
 }

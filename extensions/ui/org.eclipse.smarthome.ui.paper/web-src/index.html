@@ -33,76 +33,27 @@
 
 <meta name="apple-mobile-web-app-capable" content="yes" />
 
+<noscript>
+	<div class="jsDisabled">Sorry! PaperUI requires JavaScript to run. Please enable it in your browser.</div>
+	<style>
+.jsEnabled {
+	display: none;
+}
+</style>
+</noscript>
 </head>
 
-<body ng-controller="BodyController">
+<body ng-controller="BodyController" ng-class="{'eventSourceWarning':!eventSourceDefined}">
 	<div id="authentication" data-access-token="{{ACCESS_TOKEN}}"></div>
-	<div ng-include="'partials/include.extension.html'"></div>
-	<nav class="menu slide-menu-left" ng-controller="NavController">
-		<div class="top clickable" ng-click="navigateToRoot()">
-			<img id="logo" alt="Eclipse SmartHome Logo" src="img/logo.png" />
-			<h1 class="title">SmartHome</h1>
-		</div>
-		<ul>
-			<li ng-class="{active: isActive('control'), hidden: isHidden('control')}">
-				<a href="#control">
-					<span class="icon material-icons">dashboard</span>
-					<span class="side-menu">Control</span>
-				</a>
-			</li>
-			<li ng-class="{active: isActive('inbox')}">
-				<a href="#inbox" class="clickable">
-					<span class="icon material-icons">add_circle_outline</span>
-					<span class="side-menu">Inbox</span>
-					<span ng-show="getNumberOfNewDiscoveryResults() > 0" class="badge">{{getNumberOfNewDiscoveryResults()}}</span>
-				</a>
-			</li>
-			<li ng-class="{active: isActive('configuration'), hidden: isHidden('configuration')}">
-				<a ng-click="open('configuration')" class="clickable">
-					<span class="icon material-icons">settings</span>
-					<span class="side-menu">Configuration</span>
-				</a>
-				<ul ng-show="isActive('configuration')">
-					<li ng-class="{active: isSubActive('bindings')}">
-						<a href="#configuration/bindings">Bindings</a>
-					</li>
-					<li ng-class="{active: isSubActive('services')}">
-						<a href="#configuration/services">Services</a>
-					</li>
-					<li ng-class="{active: isSubActive('things')}">
-						<a href="#configuration/things">Things</a>
-					</li>
-				</ul>
-			</li>
-			<li ng-class="{active: isActive('extensions'), hidden: isHidden('extensions')}">
-				<a href="#extensions">
-					<span class="icon material-icons">extension</span>
-					<span class="side-menu">Extensions</span>
-				</a>
-			</li>
-			<li ng-class="{active: isActive('rules'), hidden: isHidden('rules')}">
-				<a href="#rules">
-					<span class="icon material-icons">movie_creation</span>
-					<span class="side-menu">Rules</span>
-				</a>
-			</li>
-			<li ng-class="{active: isActive('preferences'), hidden: isHidden('preferences')}">
-				<a href="#preferences">
-					<span class="icon material-icons">brightness_medium</span>
-					<span class="side-menu">Preferences</span>
-				</a>
-			</li>
-		</ul>
-		<div class="bottom">
-			<span>Paper UI</span>
-		</div>
-	</nav>
+	<div ng-class="{'jsDisabled':!eventSourceDefined}" ng-show="!eventSourceDefined">PaperUI works best with modern browsers. Please use Chrome, Firefox, Opera or Safari instead.</div>
+	<div class="jsEnabled" ng-include="'partials/include.extension.html'"></div>
+	<div class="jsEnabled" ng-include="'partials/navigation.menu.html'"></div>
 
-	<div id="wrapper">
+	<div class="jsEnabled" id="wrapper">
 		<header>
 			<a href="#" class="open-menu">&#x2261;</a>
 			<div class="title">
-				<h1>
+				<h1 flex="60">
 					{{title}}
 					<span ng-repeat="subtitle in subtitles" class="subtitle">
 						<span class="chevron material-icons">chevron_right</span>
@@ -111,6 +62,7 @@
 				</h1>
 			</div>
 		</header>
+		<bgsound id="audioSink" loop="1">
 
 		<ng-view autoscroll="true"></ng-view>
 
@@ -118,28 +70,23 @@
 	</div>
 
 	<!-- lib js files -->
+	<script src="js/jquery.min.js"></script>
 	<script src="js/angular.min.js"></script>
+	<script src="js/jquery-ui.min.js"></script>
 	<script src="js/angular-bundle.min.js"></script>
 
-
-	<script src="js/jquery.min.js"></script>
 	<script src="js/bootstrap.min.js"></script>
 
 	<!-- TODO: Create custom variant to save space -->
 	<script src="js/tinycolor.js"></script>
 	<script src="js/masonry.pkgd.min.js"></script>
 
-	<!-- TODO: Use angularized version? -->
 	<script src="js/sprintf.min.js"></script>
 
-	<!-- custom js files -->
-	<script src="js/app.js"></script>
-	<script src="js/constants.js"></script>
-	<script src="js/services.min.js"></script>
-	<script src="js/controllers.min.js"></script>
-	<script src="js/extensions.js"></script>
-	<script src="js/main.js"></script>
-	<script src="js/shared.properties.js"></script>
+	<!-- inject:js -->
+	<!-- endinject -->
+
+	<script src="js/widget.multiselect.js"></script>
 </body>
 
 </html>

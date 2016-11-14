@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2016 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -17,6 +17,7 @@ import org.eclipse.smarthome.core.items.Item;
 import org.eclipse.smarthome.core.items.ItemRegistry;
 import org.eclipse.smarthome.core.items.ItemRegistryChangeListener;
 import org.eclipse.smarthome.model.core.ModelRepository;
+import org.eclipse.smarthome.model.script.engine.action.ActionService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,6 +55,14 @@ public class RulesItemRefresher implements ItemRegistryChangeListener {
         this.itemRegistry = null;
     }
 
+    protected void addActionService(ActionService actionService) {
+        scheduleRuleRefresh();
+    }
+
+    protected void removeActionService(ActionService actionService) {
+        scheduleRuleRefresh();
+    }
+
     @Override
     public void added(Item element) {
         scheduleRuleRefresh();
@@ -85,7 +94,9 @@ public class RulesItemRefresher implements ItemRegistryChangeListener {
         @Override
         public void run() {
             try {
-                modelRepository.reloadAllModelsOfType("rules");
+                if (modelRepository != null) {
+                    modelRepository.reloadAllModelsOfType("rules");
+                }
             } catch (Exception e) {
                 logger.debug("Exception occurred during execution: {}", e.getMessage(), e);
             }

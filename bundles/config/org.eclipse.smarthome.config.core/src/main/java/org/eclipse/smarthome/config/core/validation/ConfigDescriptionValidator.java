@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2016 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -33,6 +33,7 @@ import com.google.common.collect.ImmutableList;
  * If the validator detects one or more mismatches then a {@link ConfigValidationException} is thrown.
  *
  * @author Thomas Höfer - Initial contribution
+ * @author Chris Jackson - Handle checks on multiple selection parameters
  */
 public final class ConfigDescriptionValidator {
 
@@ -59,8 +60,8 @@ public final class ConfigDescriptionValidator {
      *             description having the given URI
      * @throws NullPointerException if given config description URI or configuration parameters are null
      */
-    public static void validate(Map<String, Object> configurationParameters, URI configDescriptionURI)
-            throws ConfigValidationException {
+    @SuppressWarnings("unchecked")
+    public static void validate(Map<String, Object> configurationParameters, URI configDescriptionURI) {
         Preconditions.checkNotNull(configurationParameters, "Configuration parameters must not be null");
         Preconditions.checkNotNull(configDescriptionURI, "Config description URI must not be null");
 
@@ -79,10 +80,21 @@ public final class ConfigDescriptionValidator {
         for (String key : configurationParameters.keySet()) {
             ConfigDescriptionParameter configDescriptionParameter = map.get(key);
             if (configDescriptionParameter != null) {
-                ConfigValidationMessage message = validateParameter(configDescriptionParameter,
-                        configurationParameters.get(key));
-                if (message != null) {
-                    configDescriptionValidationMessages.add(message);
+                // If the parameter supports multiple selection, then it may be provided as an array
+                if (configDescriptionParameter.isMultiple() && configurationParameters.get(key) instanceof List) {
+                    // Perform validation on each value in the list separately
+                    for (Object value : (List<Object>) configurationParameters.get(key)) {
+                        ConfigValidationMessage message = validateParameter(configDescriptionParameter, value);
+                        if (message != null) {
+                            configDescriptionValidationMessages.add(message);
+                        }
+                    }
+                } else {
+                    ConfigValidationMessage message = validateParameter(configDescriptionParameter,
+                            configurationParameters.get(key));
+                    if (message != null) {
+                        configDescriptionValidationMessages.add(message);
+                    }
                 }
             }
         }

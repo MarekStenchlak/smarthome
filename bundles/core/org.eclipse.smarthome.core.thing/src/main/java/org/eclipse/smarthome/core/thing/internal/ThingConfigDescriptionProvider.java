@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) 2014-2016 by the respective copyright holders.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ */
 package org.eclipse.smarthome.core.thing.internal;
 
 import java.net.URI;
@@ -64,7 +71,7 @@ public class ThingConfigDescriptionProvider implements ConfigDescriptionProvider
     @Override
     public ConfigDescription getConfigDescription(URI uri, Locale locale) {
         // If this is not a concrete thing, then return
-        if ("thing".equals(uri.getScheme()) == false) {
+        if (uri == null || "thing".equals(uri.getScheme()) == false) {
             return null;
         }
 

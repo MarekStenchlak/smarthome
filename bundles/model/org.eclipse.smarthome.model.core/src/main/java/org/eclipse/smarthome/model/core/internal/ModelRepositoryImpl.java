@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2016 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -12,8 +12,10 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.eclipse.emf.common.util.URI;
@@ -44,6 +46,8 @@ public class ModelRepositoryImpl implements ModelRepository {
     private final ResourceSet resourceSet;
 
     private final List<ModelRepositoryChangeListener> listeners = new CopyOnWriteArrayList<>();
+
+    private Set<String> ignoredResources = new HashSet<>();
 
     public ModelRepositoryImpl() {
         XtextResourceSet xtextResourceSet = new SynchronizedXtextResourceSet();
@@ -81,6 +85,8 @@ public class ModelRepositoryImpl implements ModelRepository {
                 resource = getResource(name);
                 if (resource == null) {
                     // seems to be a new file
+                    // don't use XMI as a default
+                    Resource.Factory.Registry.INSTANCE.getExtensionToFactoryMap().remove("*");
                     resource = resourceSet.createResource(URI.createURI(name));
                     if (resource != null) {
                         logger.info("Loading model '{}'", name);
@@ -100,6 +106,8 @@ public class ModelRepositoryImpl implements ModelRepository {
                             logger.warn("Configuration model '" + name + "' cannot be parsed correctly!", e);
                             resourceSet.getResources().remove(resource);
                         }
+                    } else {
+                        logger.warn("Ignoring file '{}' as we do not have a parser for it.", name);
                     }
                 }
             }
@@ -142,17 +150,18 @@ public class ModelRepositoryImpl implements ModelRepository {
     @Override
     public Iterable<String> getAllModelNamesOfType(final String modelType) {
         synchronized (resourceSet) {
-            Iterable<Resource> matchingResources = Iterables.filter(resourceSet.getResources(),
-                    new Predicate<Resource>() {
-                        @Override
-                        public boolean apply(Resource input) {
-                            if (input != null && input.getURI().lastSegment().contains(".") && input.isLoaded()) {
-                                return modelType.equalsIgnoreCase(input.getURI().fileExtension());
-                            } else {
-                                return false;
-                            }
-                        }
-                    });
+            // Make a copy to avoid ConcurrentModificationException
+            List<Resource> resourceListCopy = new ArrayList<Resource>(resourceSet.getResources());
+            Iterable<Resource> matchingResources = Iterables.filter(resourceListCopy, new Predicate<Resource>() {
+                @Override
+                public boolean apply(Resource input) {
+                    if (input != null && input.getURI().lastSegment().contains(".") && input.isLoaded()) {
+                        return modelType.equalsIgnoreCase(input.getURI().fileExtension());
+                    } else {
+                        return false;
+                    }
+                }
+            });
             return Lists.newArrayList(Iterables.transform(matchingResources, new Function<Resource, String>() {
                 @Override
                 public String apply(Resource from) {
@@ -175,6 +184,7 @@ public class ModelRepositoryImpl implements ModelRepository {
                         // The quick & dirts solution is to reparse the whole resource.
                         // We trigger this by dummy updating the resource.
                         xtextResource.update(1, 0, "");
+                        notifyListeners(resource.getURI().lastSegment(), EventType.MODIFIED);
                     }
                 }
             }

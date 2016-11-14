@@ -7,12 +7,11 @@
  */
 package org.eclipse.smarthome.automation.internal.core.provider;
 
-import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Dictionary;
+import java.util.HashSet;
 import java.util.Hashtable;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -20,11 +19,9 @@ import java.util.Set;
 import org.eclipse.smarthome.automation.Action;
 import org.eclipse.smarthome.automation.Condition;
 import org.eclipse.smarthome.automation.Trigger;
-import org.eclipse.smarthome.automation.internal.core.provider.i18n.ConfigDescriptionParameterI18nUtil;
 import org.eclipse.smarthome.automation.internal.core.provider.i18n.ModuleI18nUtil;
 import org.eclipse.smarthome.automation.internal.core.provider.i18n.ModuleTypeI18nUtil;
 import org.eclipse.smarthome.automation.parser.Parser;
-import org.eclipse.smarthome.automation.parser.ParsingException;
 import org.eclipse.smarthome.automation.type.ActionType;
 import org.eclipse.smarthome.automation.type.CompositeActionType;
 import org.eclipse.smarthome.automation.type.CompositeConditionType;
@@ -157,18 +154,12 @@ public class ModuleTypeResourceBundleProvider extends AbstractResourceBundleProv
     /**
      * @see ModuleTypeProvider#getModuleType(java.lang.String, java.util.Locale)
      */
+    @SuppressWarnings("unchecked")
     @Override
     public <T extends ModuleType> T getModuleType(String UID, Locale locale) {
-        ModuleType defModuleType = null;
         synchronized (providedObjectsHolder) {
-            defModuleType = providedObjectsHolder.get(UID);
+            return (T) getPerLocale(providedObjectsHolder.get(UID), locale);
         }
-        if (defModuleType != null) {
-            @SuppressWarnings("unchecked")
-            T mt = (T) getPerLocale(defModuleType, locale);
-            return mt;
-        }
-        return null;
     }
 
     /**
@@ -178,14 +169,8 @@ public class ModuleTypeResourceBundleProvider extends AbstractResourceBundleProv
     public Collection<ModuleType> getModuleTypes(Locale locale) {
         List<ModuleType> moduleTypesList = new ArrayList<ModuleType>();
         synchronized (providedObjectsHolder) {
-            Iterator<ModuleType> i = providedObjectsHolder.values().iterator();
-            while (i.hasNext()) {
-                ModuleType defModuleType = i.next();
-                if (defModuleType != null) {
-                    ModuleType mt = getPerLocale(defModuleType, locale);
-                    if (mt != null)
-                        moduleTypesList.add(mt);
-                }
+            for (ModuleType mt : providedObjectsHolder.values()) {
+                moduleTypesList.add(getPerLocale(mt, locale));
             }
         }
         return moduleTypesList;
@@ -207,51 +192,18 @@ public class ModuleTypeResourceBundleProvider extends AbstractResourceBundleProv
         return moduleTypeRegistry != null && queue != null;
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    protected Set<ModuleType> importData(Vendor vendor, Parser<ModuleType> parser,
-            InputStreamReader inputStreamReader) {
-        List<String> portfolio = null;
-        if (vendor != null) {
-            synchronized (providerPortfolio) {
-                portfolio = providerPortfolio.get(vendor);
-                if (portfolio == null) {
-                    portfolio = new ArrayList<String>();
-                    providerPortfolio.put(vendor, portfolio);
+    protected void addNewProvidedObjects(List<String> newPortfolio, Set<ModuleType> parsedObjects) {
+        synchronized (providedObjectsHolder) {
+            for (ModuleType parsedObject : parsedObjects) {
+                String uid = parsedObject.getUID();
+                if (providedObjectsHolder.get(uid) == null && checkExistence(uid)) {
+                    continue;
                 }
+                newPortfolio.add(uid);
+                providedObjectsHolder.put(uid, parsedObject);
             }
         }
-        Set<ModuleType> providedObjects = null;
-        try {
-            providedObjects = parser.parse(inputStreamReader);
-        } catch (ParsingException e) {
-            logger.error("ModuleType parsing error!", e);
-        }
-        if (providedObjects != null && !providedObjects.isEmpty()) {
-            Iterator<ModuleType> i = providedObjects.iterator();
-            while (i.hasNext()) {
-                ModuleType providedObject = i.next();
-                if (providedObject != null) {
-                    String uid = providedObject.getUID();
-                    if (checkExistence(uid))
-                        continue;
-                    if (portfolio != null) {
-                        portfolio.add(uid);
-                    }
-                    synchronized (providedObjectsHolder) {
-                        providedObjectsHolder.put(uid, providedObject);
-                    }
-                }
-            }
-            Dictionary<String, Object> properties = new Hashtable<String, Object>();
-            properties.put(REG_PROPERTY_MODULE_TYPES, providedObjectsHolder.keySet());
-            if (mtpReg == null)
-                mtpReg = bc.registerService(ModuleTypeProvider.class.getName(), this, properties);
-            else {
-                mtpReg.setProperties(properties);
-            }
-        }
-        return providedObjects;
     }
 
     /**
@@ -263,9 +215,8 @@ public class ModuleTypeResourceBundleProvider extends AbstractResourceBundleProv
      */
     private boolean checkExistence(String uid) {
         if (moduleTypeRegistry.get(uid) != null) {
-            logger.error(
-                    "Module Type with UID \"" + uid + "\" already exists! Failed to create a second with the same UID!",
-                    new IllegalArgumentException());
+            logger.error("Module Type with UID \"{}\" already exists! Failed to create a second with the same UID!",
+                    uid, new IllegalArgumentException());
             return true;
         }
         return false;
@@ -279,17 +230,17 @@ public class ModuleTypeResourceBundleProvider extends AbstractResourceBundleProv
      * @return the localized {@link ModuleType}.
      */
     private ModuleType getPerLocale(ModuleType defModuleType, Locale locale) {
-        if (locale == null)
+        if (locale == null || defModuleType == null) {
             return defModuleType;
+        }
         String uid = defModuleType.getUID();
         Bundle bundle = getBundle(uid);
         String llabel = ModuleTypeI18nUtil.getLocalizedModuleTypeLabel(i18nProvider, bundle, uid,
                 defModuleType.getLabel(), locale);
         String ldescription = ModuleTypeI18nUtil.getLocalizedModuleTypeDescription(i18nProvider, bundle, uid,
                 defModuleType.getDescription(), locale);
-        List<ConfigDescriptionParameter> lconfigDescriptions = ConfigDescriptionParameterI18nUtil
-                .getLocalizedConfigurationDescription(i18nProvider, defModuleType.getConfigurationDescription(), bundle,
-                        uid, ModuleTypeI18nUtil.MODULE_TYPE, locale);
+        List<ConfigDescriptionParameter> lconfigDescriptions = getLocalizedConfigurationDescription(i18nProvider,
+                defModuleType.getConfigurationDescriptions(), bundle, uid, ModuleTypeI18nUtil.MODULE_TYPE, locale);
         if (defModuleType instanceof ActionType) {
             return createLocalizedActionType((ActionType) defModuleType, bundle, uid, locale, lconfigDescriptions,
                     llabel, ldescription);
@@ -395,6 +346,20 @@ public class ModuleTypeResourceBundleProvider extends AbstractResourceBundleProv
                     tt.getVisibility(), outputs);
         }
         return ltt;
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    protected void updateProviderRegistration() {
+        Dictionary<String, Object> properties = new Hashtable<String, Object>();
+        synchronized (providedObjectsHolder) {
+            properties.put(REG_PROPERTY_MODULE_TYPES, new HashSet<String>(providedObjectsHolder.keySet()));
+        }
+        if (mtpReg == null) {
+            mtpReg = bc.registerService(ModuleTypeProvider.class.getName(), this, properties);
+        } else {
+            mtpReg.setProperties(properties);
+        }
     }
 
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2015 Deutsche Telekom AG and others.
+ * Copyright (c) 2014-2016 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -24,8 +24,10 @@ import org.eclipse.smarthome.core.thing.ManagedThingProvider
 import org.eclipse.smarthome.core.thing.Thing
 import org.eclipse.smarthome.core.thing.ThingRegistry
 import org.eclipse.smarthome.core.thing.ThingStatus
+import org.eclipse.smarthome.core.thing.ThingTypeMigrationService
 import org.eclipse.smarthome.core.thing.ThingTypeUID
 import org.eclipse.smarthome.core.thing.ThingUID
+import org.eclipse.smarthome.core.thing.internal.ThingManager
 import org.eclipse.smarthome.core.thing.link.ItemChannelLink
 import org.eclipse.smarthome.core.thing.link.ManagedItemChannelLinkProvider
 import org.eclipse.smarthome.core.thing.type.ChannelDefinition
@@ -83,6 +85,7 @@ class ChangeThingTypeOSGiTest extends OSGiTest {
 
     def specificInits = 0;
     def genericInits = 0;
+    def unregisterHandlerDelay = 0;
 
 
     @Before
@@ -189,6 +192,12 @@ class ChangeThingTypeOSGiTest extends OSGiTest {
                 return new SpecificThingHandler(thing)
             }
         }
+
+        @Override
+        public void unregisterHandler(Thing thing) {
+            Thread.sleep(unregisterHandlerDelay);
+            super.unregisterHandler(thing);
+        }
     }
 
     class GenericThingHandler extends BaseThingHandler {
@@ -199,6 +208,7 @@ class ChangeThingTypeOSGiTest extends OSGiTest {
 
         @Override
         public void initialize() {
+            println "[ChangeThingTypeOSGiTest] GenericThingHandler.initialize"
             super.initialize()
             genericInits++;
             if (selfChanging) {
@@ -208,7 +218,7 @@ class ChangeThingTypeOSGiTest extends OSGiTest {
 
         @Override
         public void handleCommand(ChannelUID channelUID, Command command) {
-            println "Generic Handle Command"
+            println "[ChangeThingTypeOSGiTest] Generic Handle Command"
         }
     }
 
@@ -221,18 +231,20 @@ class ChangeThingTypeOSGiTest extends OSGiTest {
 
         @Override
         public void initialize() {
+            println "[ChangeThingTypeOSGiTest] SpecificThingHandler.initialize"
             specificInits++;
             super.initialize();
         }
 
         @Override
         public void handleCommand(ChannelUID channelUID, Command command) {
-            println "Specific Handle Command"
+            println "[ChangeThingTypeOSGiTest] Specific Handle Command"
         }
     }
 
     @Test
     void 'assert changing the ThingType works'() {
+        println "[ChangeThingTypeOSGiTest] ======== assert changing the ThingType works"
         def thing = ThingFactory.createThing(thingTypeGeneric, new ThingUID("testBinding", "testThing"), new Configuration(), null, configDescriptionRegistry)
         thing.setProperty("universal", "survives")
         managedThingProvider.add(thing)
@@ -244,17 +256,16 @@ class ChangeThingTypeOSGiTest extends OSGiTest {
         assertThat thing.getChannels().size(), is(1)
         assertThat thing.getChannels().get(0).getUID(), is (CHANNEL_GENERIC_UID)
         assertThat thing.getProperties().get("universal"), is("survives")
-        def handlerOsgiService = getService(ThingHandler, {
-            it.getProperty(ThingHandler.SERVICE_PROPERTY_THING_ID).toString() == "testBinding::testThing"
-        })
-        assertThat handlerOsgiService, is(thing.getHandler())
+
+        def handlerFactory = getService(ThingHandlerFactory.class, SampleThingHandlerFactory.class)
+        assertThat handlerFactory, not(null)
+        def handlers = getThingHandlers(handlerFactory)
+        assertThat handlers.contains(thing.getHandler()), is(true)
+
         thing.getHandler().handleCommand(null, null)
         waitForAssert({
             assertThat thing.getStatus(), is(ThingStatus.ONLINE)
         }, 4000, 100)
-
-        assertThat thing.getChannels().get(0).getLinkedItems().size(), is(1)
-        assertThat thing.getChannels().get(0).getLinkedItems().iterator().next().getName(), is(ITEM_GENERIC)
 
         // Now do the actual migration
         thing.getHandler().changeThingType(THING_TYPE_SPECIFIC_UID, new Configuration(['providedspecific':'there']))
@@ -264,16 +275,36 @@ class ChangeThingTypeOSGiTest extends OSGiTest {
 
     @Test
     void 'assert changing thing type within initialize works'() {
+        println "[ChangeThingTypeOSGiTest] ======== assert changing thing type within initialize works"
         selfChanging = true
+        println "[ChangeThingTypeOSGiTest] Create thing"
         def thing = ThingFactory.createThing(thingTypeGeneric, new ThingUID("testBinding", "testThing"), new Configuration(), null, configDescriptionRegistry)
         thing.setProperty("universal", "survives")
+        println "[ChangeThingTypeOSGiTest] Add thing to managed thing provider"
         managedThingProvider.add(thing)
 
+        println "[ChangeThingTypeOSGiTest] Wait for thing changed"
+        assertThingWasChanged(thing)
+    }
+
+    @Test
+    void 'assert changing thing type within initialize works even if service deregistration is slow'() {
+        println "[ChangeThingTypeOSGiTest] ======== assert changing thing type within initialize works even if service deregistration is slow"
+        selfChanging = true
+        unregisterHandlerDelay = 6000
+        println "[ChangeThingTypeOSGiTest] Create thing"
+        def thing = ThingFactory.createThing(thingTypeGeneric, new ThingUID("testBinding", "testThing"), new Configuration(), null, configDescriptionRegistry)
+        thing.setProperty("universal", "survives")
+        println "[ChangeThingTypeOSGiTest] Add thing to managed thing provider"
+        managedThingProvider.add(thing)
+
+        println "[ChangeThingTypeOSGiTest] Wait for thing changed"
         assertThingWasChanged(thing)
     }
 
     @Test
     void 'assert loading specialized thing type works directly'() {
+        println "[ChangeThingTypeOSGiTest] ======== assert loading specialized thing type works directly"
         clearProviders()
 
         def storage = getService(StorageService)
@@ -300,14 +331,16 @@ class ChangeThingTypeOSGiTest extends OSGiTest {
         waitForAssert({
             assertThat thing.getHandler(), isA(SpecificThingHandler)
         }, 4000, 100)
-        def handlerOsgiService2 = getService(ThingHandler, {
-            it.getProperty(ThingHandler.SERVICE_PROPERTY_THING_ID).toString() == "testBinding::persistedThing"
-        })
-        assertThat handlerOsgiService2, is(thing.getHandler())
+        def handlerFactory = getService(ThingHandlerFactory.class, SampleThingHandlerFactory.class)
+        assertThat handlerFactory, not(null)
+        def handlers = getThingHandlers(handlerFactory)
+        assertThat handlers.contains(thing.getHandler()), is(true)
 
         // Ensure it's initialized
-        assertThat(specificInits, is(1))
-        assertThat(genericInits, is(0))
+        waitForAssert {
+            assertThat(specificInits, is(1))
+            assertThat(genericInits, is(0))
+        }
 
         // Ensure the Thing is ONLINE again
         assertThat thing.getStatus(), is(ThingStatus.ONLINE)
@@ -318,11 +351,13 @@ class ChangeThingTypeOSGiTest extends OSGiTest {
         // Ensure that the ThingHandler has been registered as an OSGi service correctly
         waitForAssert({
             assertThat thing.getHandler(), isA(SpecificThingHandler)
-        }, 4000, 100)
-        def handlerOsgiService2 = getService(ThingHandler, {
-            it.getProperty(ThingHandler.SERVICE_PROPERTY_THING_ID).toString() == "testBinding::testThing"
-        })
-        assertThat handlerOsgiService2, is(thing.getHandler())
+        }, 30000, 100)
+
+        def handlerFactory = getService(ThingHandlerFactory.class, SampleThingHandlerFactory.class)
+        assertThat handlerFactory, not(null)
+        def handlers = getThingHandlers(handlerFactory)
+        assertThat handlers.contains(thing.getHandler()), is(true)
+
         // Ensure it's initialized
         waitForAssert({
             assertThat(specificInits, is(1))
@@ -343,10 +378,6 @@ class ChangeThingTypeOSGiTest extends OSGiTest {
 
         // Ensure that the properties are still there
         assertThat thing.getProperties().get("universal"), is("survives")
-
-        // Ensure items links have been updated
-        assertThat thing.getChannels().get(0).getLinkedItems().size(), is(1)
-        assertThat thing.getChannels().get(0).getLinkedItems().iterator().next().getName(), is(ITEM_SPECIFIC)
 
         // Ensure the new thing type got written correctly into the storage
         assertThat managedThingProvider.get(new ThingUID("testBinding", "testThing")).getThingTypeUID(), is(THING_TYPE_SPECIFIC_UID)
@@ -386,4 +417,9 @@ class ChangeThingTypeOSGiTest extends OSGiTest {
         return channelDefinitions;
     }
 
+    private Set<ThingHandler> getThingHandlers(ThingHandlerFactory factory) {
+        def thingManager = getService(ThingTypeMigrationService.class, ThingManager.class)
+        assertThat thingManager, not(null)
+        thingManager.thingHandlersByFactory.get(factory)
+    }
 }

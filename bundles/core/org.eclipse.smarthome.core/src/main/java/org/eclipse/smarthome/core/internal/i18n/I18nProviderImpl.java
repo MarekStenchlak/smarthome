@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2016 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -12,6 +12,7 @@ import java.util.Locale;
 import java.util.ResourceBundle;
 
 import org.eclipse.smarthome.core.i18n.I18nProvider;
+import org.eclipse.smarthome.core.i18n.LocaleProvider;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 
@@ -25,18 +26,30 @@ import org.osgi.framework.BundleContext;
  *
  * @author Michael Grammling - Initial Contribution
  * @author Thomas Höfer - Added getText operation with arguments
+ * @author Markus Rathgeb - Add locale provider support
  */
 public class I18nProviderImpl implements I18nProvider {
 
+    private LocaleProvider localeProvider;
     private ResourceBundleTracker resourceBundleTracker;
 
     protected void activate(BundleContext bundleContext) {
-        this.resourceBundleTracker = new ResourceBundleTracker(bundleContext);
+        this.resourceBundleTracker = new ResourceBundleTracker(bundleContext, localeProvider);
         this.resourceBundleTracker.open();
     }
 
     protected void deactivate(BundleContext bundleContext) {
         this.resourceBundleTracker.close();
+    }
+
+    protected void setLocaleProvider(final LocaleProvider localeProvider) {
+        this.localeProvider = localeProvider;
+    }
+
+    protected void unsetLocaleProvider(final LocaleProvider localeProvider) {
+        if (this.localeProvider == localeProvider) {
+            this.localeProvider = null;
+        }
     }
 
     @Override

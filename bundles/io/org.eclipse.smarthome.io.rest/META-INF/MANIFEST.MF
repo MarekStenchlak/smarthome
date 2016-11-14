@@ -2,7 +2,7 @@ Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: Eclipse SmartHome REST Interface Bundle
 Bundle-SymbolicName: org.eclipse.smarthome.io.rest
-Bundle-Version: 0.8.0.qualifier
+Bundle-Version: 0.9.0.qualifier
 Bundle-Vendor: Eclipse.org/SmartHome
 Bundle-RequiredExecutionEnvironment: JavaSE-1.7
 Import-Package: com.google.common.base,
@@ -17,12 +17,13 @@ Import-Package: com.google.common.base,
  javax.ws.rs.ext,
  org.apache.commons.lang,
  org.eclipse.smarthome.core.events,
+ org.eclipse.smarthome.core.i18n,
  org.eclipse.smarthome.core.items,
  org.eclipse.smarthome.core.library.items,
  org.eclipse.smarthome.core.library.types,
  org.eclipse.smarthome.core.types,
  org.eclipse.smarthome.io.rest,
- org.eclipse.smarthome.io.transport.mdns;resolution:=optional,
+ org.glassfish.jersey.server,
  org.osgi.framework,
  org.osgi.service.cm,
  org.osgi.service.event,

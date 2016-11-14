@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2016 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -26,7 +26,7 @@ import org.eclipse.smarthome.config.core.dto.ConfigDescriptionDTO;
 import org.eclipse.smarthome.config.core.dto.ConfigDescriptionDTOMapper;
 import org.eclipse.smarthome.io.rest.JSONResponse;
 import org.eclipse.smarthome.io.rest.LocaleUtil;
-import org.eclipse.smarthome.io.rest.RESTResource;
+import org.eclipse.smarthome.io.rest.SatisfiableRESTResource;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
@@ -46,7 +46,7 @@ import io.swagger.annotations.ApiResponses;
  */
 @Path(ConfigDescriptionResource.PATH_CONFIG_DESCRIPTIONS)
 @Api(value = ConfigDescriptionResource.PATH_CONFIG_DESCRIPTIONS)
-public class ConfigDescriptionResource implements RESTResource {
+public class ConfigDescriptionResource implements SatisfiableRESTResource {
 
     /** The URI path to this resource */
     public static final String PATH_CONFIG_DESCRIPTIONS = "config-descriptions";
@@ -96,5 +96,10 @@ public class ConfigDescriptionResource implements RESTResource {
 
     protected void unsetConfigDescriptionRegistry(ConfigDescriptionRegistry configDescriptionRegistry) {
         this.configDescriptionRegistry = null;
+    }
+
+    @Override
+    public boolean isSatisfied() {
+        return configDescriptionRegistry != null;
     }
 }

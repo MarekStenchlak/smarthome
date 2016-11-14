@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2016 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -13,14 +13,10 @@ import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
-
 import org.eclipse.smarthome.config.core.Configuration;
 import org.eclipse.smarthome.core.items.Item;
-import org.eclipse.smarthome.core.thing.binding.BaseThingHandler;
-import org.eclipse.smarthome.core.thing.link.ItemChannelLinkRegistry;
+import org.eclipse.smarthome.core.thing.type.ChannelKind;
 import org.eclipse.smarthome.core.thing.type.ChannelTypeUID;
-
-import com.google.common.collect.ImmutableSet;
 
 /**
  * {@link Channel} is a part of a {@link Thing} that represents a functionality
@@ -32,10 +28,13 @@ import com.google.common.collect.ImmutableSet;
  * @author Benedikt Niehues - fix for Bug https://bugs.eclipse.org/bugs/show_bug.cgi?id=445137 considering default
  *         values
  * @author Chris Jackson - Added properties, label, description
+ * @author Kai Kreuzer - Removed linked items from channel
  */
 public class Channel {
 
     private String acceptedItemType;
+
+    private ChannelKind kind;
 
     private ChannelUID uid;
 
@@ -49,9 +48,7 @@ public class Channel {
 
     private Map<String, String> properties;
 
-    private Set<String> defaultTags;
-
-    transient private Set<Item> linkedItems = new LinkedHashSet<>();
+    private Set<String> defaultTags = new LinkedHashSet<>();
 
     /**
      * Package protected default constructor to allow reflective instantiation.
@@ -62,31 +59,38 @@ public class Channel {
     public Channel(ChannelUID uid, String acceptedItemType) {
         this.uid = uid;
         this.acceptedItemType = acceptedItemType;
+        this.kind = ChannelKind.STATE;
         this.configuration = new Configuration();
         this.properties = Collections.unmodifiableMap(new HashMap<String, String>(0));
     }
 
     public Channel(ChannelUID uid, String acceptedItemType, Configuration configuration) {
-        this(uid, null, acceptedItemType, configuration, new HashSet<String>(0), null, null, null);
+        this(uid, null, acceptedItemType, ChannelKind.STATE, configuration, new HashSet<String>(0), null, null, null);
     }
 
     public Channel(ChannelUID uid, String acceptedItemType, Set<String> defaultTags) {
-        this(uid, null, acceptedItemType, null, defaultTags == null ? new HashSet<String>(0) : defaultTags, null, null,
-                null);
+        this(uid, null, acceptedItemType, ChannelKind.STATE, null,
+                defaultTags == null ? new HashSet<String>(0) : defaultTags, null, null, null);
     }
 
     public Channel(ChannelUID uid, String acceptedItemType, Configuration configuration, Set<String> defaultTags,
             Map<String, String> properties) {
-        this(uid, null, acceptedItemType, null, defaultTags == null ? new HashSet<String>(0) : defaultTags, properties,
-                null, null);
+        this(uid, null, acceptedItemType, ChannelKind.STATE, null,
+                defaultTags == null ? new HashSet<String>(0) : defaultTags, properties, null, null);
     }
 
-    public Channel(ChannelUID uid, ChannelTypeUID channelTypeUID, String acceptedItemType, Configuration configuration,
-            Set<String> defaultTags, Map<String, String> properties, String label, String description) {
+    public Channel(ChannelUID uid, ChannelTypeUID channelTypeUID, String acceptedItemType, ChannelKind kind,
+            Configuration configuration, Set<String> defaultTags, Map<String, String> properties, String label,
+            String description) {
+        if (kind == null) {
+            throw new IllegalArgumentException("kind must not be null");
+        }
+
         this.uid = uid;
         this.channelTypeUID = channelTypeUID;
         this.acceptedItemType = acceptedItemType;
         this.configuration = configuration;
+        this.kind = kind;
         this.label = label;
         this.description = description;
         this.properties = properties;
@@ -106,6 +110,20 @@ public class Channel {
      */
     public String getAcceptedItemType() {
         return this.acceptedItemType;
+    }
+
+    /**
+     * Returns the channel kind.
+     *
+     * @return channel kind
+     */
+    public ChannelKind getKind() {
+        if (kind == null) {
+            // STATE is the default.
+            return ChannelKind.STATE;
+        }
+
+        return kind;
     }
 
     /**
@@ -172,54 +190,5 @@ public class Channel {
      */
     public Set<String> getDefaultTags() {
         return defaultTags;
-    }
-
-    /**
-     * Adds an linked item to the list of linked items (this is an internal method
-     * that must not be called by clients).
-     *
-     * @param item item (must not be null)
-     */
-    public void addLinkedItem(Item item) {
-        this.linkedItems.add(item);
-    }
-
-    /**
-     * Removes an linked item from the list of linked items (this is an internal method
-     * that must not be called by clients).
-     *
-     * @param item item (must not be null)
-     */
-    public void removeLinkedItem(Item item) {
-        this.linkedItems.remove(item);
-    }
-
-    /**
-     * Returns a set of items, which are linked to the channel.
-     *
-     * @deprecated Will be removed soon, because it is dynamic data which does not belong to the thing. Use
-     *             {@link BaseThingHandler#isLinked} instead or alternatively
-     *             {@link ItemChannelLinkRegistry} if you are not within a handler implementation.
-     *
-     * @return Set of items, which are linked to the channel
-     */
-    @Deprecated
-    public Set<Item> getLinkedItems() {
-        return ImmutableSet.copyOf(this.linkedItems);
-    }
-
-    /**
-     * Returns whether at least one item is linked to the channel.
-     *
-     * @deprecated Will be removed soon, because it is dynamic data which does not belong to the thing. Use
-     *             {@link BaseThingHandler#isLinked} instead or alternatively
-     *             {@link ItemChannelLinkRegistry} if you are not within a handler implementation.
-     *
-     * @return true if at least one item is linked to the channel, false
-     *         otherwise
-     */
-    @Deprecated
-    public boolean isLinked() {
-        return !getLinkedItems().isEmpty();
     }
 }

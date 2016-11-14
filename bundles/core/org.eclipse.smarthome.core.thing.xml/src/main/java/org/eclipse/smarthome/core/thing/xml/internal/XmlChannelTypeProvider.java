@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2016 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
-
+import java.util.concurrent.ConcurrentHashMap;
 import org.eclipse.smarthome.core.common.osgi.ServiceBinder.Bind;
 import org.eclipse.smarthome.core.common.osgi.ServiceBinder.Unbind;
 import org.eclipse.smarthome.core.i18n.I18nProvider;
@@ -34,6 +34,7 @@ import org.osgi.framework.Bundle;
  * {@link XmlChannelTypeProvider} provides channel types from XML files.
  *
  * @author Dennis Nobel - Initial contribution
+ * @author Kai Kreuzer - fixed concurrency issues
  */
 public class XmlChannelTypeProvider implements ChannelTypeProvider {
 
@@ -48,25 +49,33 @@ public class XmlChannelTypeProvider implements ChannelTypeProvider {
 
         @Override
         public boolean equals(Object obj) {
-            if (this == obj)
+            if (this == obj) {
                 return true;
-            if (obj == null)
+            }
+            if (obj == null) {
                 return false;
-            if (getClass() != obj.getClass())
+            }
+            if (getClass() != obj.getClass()) {
                 return false;
+            }
             LocalizedChannelTypeKey other = (LocalizedChannelTypeKey) obj;
-            if (!getOuterType().equals(other.getOuterType()))
+            if (!getOuterType().equals(other.getOuterType())) {
                 return false;
+            }
             if (locale == null) {
-                if (other.locale != null)
+                if (other.locale != null) {
                     return false;
-            } else if (!locale.equals(other.locale))
+                }
+            } else if (!locale.equals(other.locale)) {
                 return false;
+            }
             if (uid == null) {
-                if (other.uid != null)
+                if (other.uid != null) {
                     return false;
-            } else if (!uid.equals(other.uid))
+                }
+            } else if (!uid.equals(other.uid)) {
                 return false;
+            }
             return true;
         }
 
@@ -90,8 +99,8 @@ public class XmlChannelTypeProvider implements ChannelTypeProvider {
 
     private Map<Bundle, List<ChannelType>> bundleChannelTypesMap;
 
-    private Map<LocalizedChannelTypeKey, ChannelGroupType> localizedChannelGroupTypeCache = new HashMap<>();
-    private Map<LocalizedChannelTypeKey, ChannelType> localizedChannelTypeCache = new HashMap<>();
+    private Map<LocalizedChannelTypeKey, ChannelGroupType> localizedChannelGroupTypeCache = new ConcurrentHashMap<>();
+    private Map<LocalizedChannelTypeKey, ChannelType> localizedChannelTypeCache = new ConcurrentHashMap<>();
 
     private ThingTypeI18nUtil thingTypeI18nUtil;
 
@@ -173,6 +182,7 @@ public class XmlChannelTypeProvider implements ChannelTypeProvider {
                     }
                 }
             }
+        } else {
         }
         return null;
     }
@@ -333,8 +343,8 @@ public class XmlChannelTypeProvider implements ChannelTypeProvider {
             StateDescription state = createLocalizedChannelState(bundle, channelType, channelTypeUID, locale);
 
             ChannelType localizedChannelType = new ChannelType(channelTypeUID, channelType.isAdvanced(),
-                    channelType.getItemType(), label, description, channelType.getCategory(), channelType.getTags(),
-                    state, channelType.getConfigDescriptionURI());
+                    channelType.getItemType(), channelType.getKind(), label, description, channelType.getCategory(),
+                    channelType.getTags(), state, channelType.getEvent(), channelType.getConfigDescriptionURI());
 
             localizedChannelTypeCache.put(localizedChannelTypeKey, localizedChannelType);
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2016 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -28,7 +28,7 @@ import org.eclipse.smarthome.core.extension.Extension;
 import org.eclipse.smarthome.core.extension.ExtensionService;
 import org.eclipse.smarthome.core.extension.ExtensionType;
 import org.eclipse.smarthome.io.rest.LocaleUtil;
-import org.eclipse.smarthome.io.rest.RESTResource;
+import org.eclipse.smarthome.io.rest.SatisfiableRESTResource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,11 +45,11 @@ import io.swagger.annotations.ApiResponses;
  */
 @Path(ExtensionResource.PATH_EXTENSIONS)
 @Api(value = ExtensionResource.PATH_EXTENSIONS)
-public class ExtensionResource implements RESTResource {
+public class ExtensionResource implements SatisfiableRESTResource {
 
     private static final String THREAD_POOL_NAME = "extensionService";
 
-    public static final String PATH_EXTENSIONS = "/extensions";
+    public static final String PATH_EXTENSIONS = "extensions";
 
     private final Logger logger = LoggerFactory.getLogger(ExtensionResource.class);
 
@@ -174,6 +174,11 @@ public class ExtensionResource implements RESTResource {
             Event event = ExtensionEventFactory.createExtensionFailureEvent(extensionId, msg);
             eventPublisher.post(event);
         }
+    }
+
+    @Override
+    public boolean isSatisfied() {
+        return extensionService != null;
     }
 
 }

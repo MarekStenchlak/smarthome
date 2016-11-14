@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2016 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -56,10 +56,12 @@ public class ChartRenderer extends AbstractWidgetRenderer {
             }
 
             String url = "/chart?" + itemParam + "&period=" + chart.getPeriod() + "&random=1";
-            if (chart.getService() != null)
+            if (chart.getService() != null) {
                 url += "&service=" + chart.getService();
+            }
 
             String snippet = getSnippet("chart");
+            snippet = preprocessSnippet(snippet, w);
 
             if (chart.getRefresh() > 0) {
                 snippet = StringUtils.replace(snippet, "%update_interval%", Integer.toString(chart.getRefresh()));

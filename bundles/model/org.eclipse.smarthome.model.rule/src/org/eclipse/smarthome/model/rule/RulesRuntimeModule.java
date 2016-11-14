@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2016 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -21,10 +21,11 @@ import org.eclipse.xtext.common.types.access.reflect.ReflectionTypeScopeProvider
 import org.eclipse.xtext.common.types.xtext.AbstractTypeScopeProvider;
 import org.eclipse.xtext.generator.IGenerator;
 import org.eclipse.xtext.generator.IGenerator.NullGenerator;
+import org.eclipse.xtext.linking.lazy.LazyURIEncoder;
 import org.eclipse.xtext.scoping.IScopeProvider;
 import org.eclipse.xtext.scoping.impl.AbstractDeclarativeScopeProvider;
 import org.eclipse.xtext.xbase.interpreter.IExpressionInterpreter;
-import org.eclipse.xtext.xbase.scoping.batch.ImplicitlyImportedTypes;
+import org.eclipse.xtext.xbase.scoping.batch.ImplicitlyImportedFeatures;
 
 import com.google.inject.Binder;
 import com.google.inject.name.Names;
@@ -38,7 +39,7 @@ import com.google.inject.name.Names;
 @SuppressWarnings("restriction")
 public class RulesRuntimeModule extends org.eclipse.smarthome.model.rule.AbstractRulesRuntimeModule {
 
-    public Class<? extends ImplicitlyImportedTypes> bindImplicitlyImportedTypes() {
+    public Class<? extends ImplicitlyImportedFeatures> bindImplicitlyImportedTypes() {
         return RulesImplicitlyImportedTypes.class;
     }
 
@@ -77,4 +78,9 @@ public class RulesRuntimeModule extends org.eclipse.smarthome.model.rule.Abstrac
         return new ActionClassLoader(super.bindClassLoaderToInstance());
     }
 
+    @Override
+    public void configureUseIndexFragmentsForLazyLinking(Binder binder) {
+        binder.bind(Boolean.TYPE).annotatedWith(Names.named(LazyURIEncoder.USE_INDEXED_FRAGMENTS_BINDING))
+                .toInstance(Boolean.FALSE);
+    }
 }

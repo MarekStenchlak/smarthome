@@ -2,9 +2,8 @@ Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: Eclipse SmartHome Persistence Model
 Bundle-Vendor: Eclipse.org/SmartHome
-Bundle-Version: 0.8.0.qualifier
+Bundle-Version: 0.9.0.qualifier
 Bundle-SymbolicName: org.eclipse.smarthome.model.persistence;singleton:=true
-Bundle-ActivationPolicy: lazy
 Require-Bundle: org.eclipse.xtext;bundle-version="2.1.0";visibility:=reexport,
  org.eclipse.xtext.xbase;bundle-version="2.1.0";resolution:=optional;visibility:=reexport,
  org.eclipse.xtext.generator;resolution:=optional,
@@ -17,7 +16,8 @@ Require-Bundle: org.eclipse.xtext;bundle-version="2.1.0";visibility:=reexport,
  org.eclipse.emf.common,
  org.antlr.runtime,
  org.eclipse.xtext.common.types,
- org.eclipse.smarthome.model.lazygen;resolution:=optional
+ org.eclipse.smarthome.model.lazygen;resolution:=optional,
+ org.eclipse.xtext.xbase.lib
 Import-Package: com.google.common.base,
  com.google.common.collect,
  org.apache.commons.logging,
@@ -60,7 +60,5 @@ Export-Package: org.eclipse.smarthome.model.persistence,
  org.joda.time.field,
  org.joda.time.format,
  org.joda.time.tz
-Service-Component: OSGI-INF/persistencemanager.xml,
- OSGI-INF/persistenceextension.xml
-Bundle-ClassPath: lib/joda-time-2.9.2.jar,
- .
+Service-Component: OSGI-INF/persistencemanager.xml,OSGI-INF/persistenceextension.xml
+Bundle-ClassPath: lib/joda-time-2.9.2.jar,.

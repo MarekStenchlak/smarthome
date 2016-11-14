@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2016 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -13,10 +13,12 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.eclipse.smarthome.config.core.BundleProcessor;
 import org.eclipse.smarthome.config.xml.util.XmlDocumentReader;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleEvent;
+import org.osgi.framework.ServiceRegistration;
 import org.osgi.util.tracker.BundleTracker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,6 +51,11 @@ public class XmlDocumentBundleTracker<T> extends BundleTracker<Bundle> {
 
     private final AbstractAsyncBundleProcessor asyncLoader;
 
+    private BundleContext bundleContext;
+
+    @SuppressWarnings("rawtypes")
+    private ServiceRegistration asyncLoaderRegistration;
+
     /**
      * Creates a new instance of this class with the specified parameters.
      *
@@ -68,9 +75,10 @@ public class XmlDocumentBundleTracker<T> extends BundleTracker<Bundle> {
      */
     public XmlDocumentBundleTracker(BundleContext bundleContext, String xmlDirectory,
             XmlDocumentReader<T> xmlDocumentTypeReader, XmlDocumentProviderFactory<T> xmlDocumentProviderFactory)
-                    throws IllegalArgumentException {
+            throws IllegalArgumentException {
 
         super(bundleContext, Bundle.ACTIVE, null);
+        this.bundleContext = bundleContext;
 
         if (bundleContext == null) {
             throw new IllegalArgumentException("The BundleContext must not be null!");
@@ -135,11 +143,17 @@ public class XmlDocumentBundleTracker<T> extends BundleTracker<Bundle> {
                 }
             }
 
+            @Override
+            public String toString() {
+                return super.toString() + "(" + XmlDocumentBundleTracker.this.xmlDirectory + ")";
+            }
+
         };
     }
 
     @Override
     public final synchronized void open() {
+        asyncLoaderRegistration = bundleContext.registerService(BundleProcessor.class.getName(), asyncLoader, null);
         super.open();
     }
 
@@ -147,6 +161,10 @@ public class XmlDocumentBundleTracker<T> extends BundleTracker<Bundle> {
     public final synchronized void close() {
         super.close();
         this.bundleDocumentProviderMap.clear();
+        if (asyncLoaderRegistration != null) {
+            asyncLoaderRegistration.unregister();
+            asyncLoaderRegistration = null;
+        }
     }
 
     private XmlDocumentProvider<T> acquireXmlDocumentProvider(Bundle bundle) {

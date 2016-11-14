@@ -98,7 +98,7 @@ md-tabs md-tab {
 	background-color: #01324D;
 }
 
-md-tabs.md-default-theme md-ink-bar {
+md-tabs md-ink-bar {
 	color: #ffff85;
 	background: white;
 }
@@ -154,7 +154,7 @@ md-radio-button.md-default-theme.md-checked .md-ink-ripple, md-switch.md-default
 }
 
 /* Checkbox */
-md-checkbox.md-default-theme.md-checked .material-icons {
+md-checkbox.md-default-theme.md-checked .md-icon, md-checkbox.md-default-theme.md-checked .material-icons {
 	background-color: #4CAF50;
 }
 
@@ -479,7 +479,6 @@ md-progress-circular.md-default-theme .md-inner .md-left .md-half-circle
 }
 
 .container .md-select-value {
-	text-align: center;
 	padding: 16px 2px 1px;
 	border-bottom-style: none;
 	font-size: 18px;
@@ -545,7 +544,7 @@ md-progress-circular.md-default-theme .md-inner .md-left .md-half-circle
 	margin: 0px !important;
 }
 
-.border-invalid {
+.border-invalid, .border-invalid.border-invalid {
 	border-bottom: 1px solid rgb(244, 67, 54);
 }
 
@@ -558,8 +557,16 @@ md-progress-circular.md-default-theme .md-inner .md-left .md-half-circle
 	min-height: 80px;
 }
 
+.parameter>div md-select-value>span:first-child, .parameter>div md-select-value .md-text>span:first-child{
+    max-width: 100%;
+}
+
 .parameter md-input-container {
 	padding-bottom: 5px;
+}
+
+.parameter>div p.hint {
+	margin-top: 0px;
 }
 
 .includeConfig legend {
@@ -587,12 +594,28 @@ md-progress-circular.md-default-theme .md-inner .md-left .md-half-circle
 	font-weight: 400;
 }
 
-.includeConfig .borderhidden {
+.includeConfig .borderhidden, .linkedItems>div.borderhidden {
 	border: 0px;
+}
+
+.includeConfig .advButton {
+    margin-left: 15px;
 }
 
 .channels>div>div>.channel {
 	margin-left: 20px;
+}
+
+.channels {
+	margin-top: 5px;
+}
+
+.channel .circle {
+	margin-left: 8px;
+}
+
+.channels .channelGroup {
+	margin-top: 20px;
 }
 
 .showmore {
@@ -611,7 +634,7 @@ md-progress-circular.md-default-theme .md-inner .md-left .md-half-circle
 .config-textInput {
     font-size: 10.5px;
     color: rgba(0,0,0,0.54);
-    margin-left: 4px;
+    margin-left: 2px;
 }
 
 .icontrol .md-button, .thing .md-button, .item-content .actions .md-button, .header-toolbar .md-button,
@@ -620,3 +643,512 @@ md-progress-circular.md-default-theme .md-inner .md-left .md-half-circle
     min-height: 42px;
 }
 
+.vcard .actions {
+	margin: 10px;
+}
+
+.vcard .actions span {
+	font-size: 24px;
+}
+
+.md-icon-reorder:hover {
+	text-decorations: none;
+}
+
+.vcard .actions span:focus {
+	outline: none;
+}
+
+@media all and (max-width: 720px) {
+	md-dialog-content {
+		max-height: 420px;
+	}
+	.draggable .md-icon-reorder {
+		display: block;
+	}
+}
+
+@media all and (min-width: 720px) {
+	.draggable .md-icon-reorder {
+		display: none;
+	}
+}
+
+.rules-input {
+	padding: 0 0 12px 0px;
+	margin-right: 3%;
+}
+
+.drag-handle {
+	position: absolute;
+	top: 0px;
+	left: 0px;
+	color: grey;
+}
+
+.cursor-pointer {
+	cursor: pointer;
+}
+
+textarea.scriptArea {
+    max-width: 550px;
+    width:100%;
+    max-height: 250px;
+    overflow: scroll;
+    border: 1px solid #ccc;
+    padding-left: 5px;
+    font-family: monospace;
+    font-size: 12px;
+    line-height: 1.2;
+    outline: none;
+}
+
+.configContainer {
+    margin-top: 0px;
+    padding-left: 0px;
+}
+
+.ruleNameDesc {
+    margin-top: 3%;
+    margin-left: 10px;
+}
+
+.customMessage {
+    color: rgb(221, 44, 0);
+    font-size: 12px;
+    line-height: 14px;
+    margin-top: 5px;
+}
+
+.hint.noMargin, .noMargin {
+	margin-top: 0px;
+}
+
+.noPadding {
+	padding: 0px;
+}
+
+md-input-container .md-errors-spacer {
+	min-height: 0px;
+}
+
+.controlSelect .md-select-value :first-child {
+	flex: auto;
+}
+
+.no-margin {
+	margin: 0px;
+}
+
+.itemChannel {
+	padding: 15px;
+	padding-bottom: 0px;
+}
+
+.italic {
+	font-style:italic;
+}
+
+.item-edit {
+	margin-top: 20px;
+}
+
+.itemIcon-text {
+	display: none;
+}
+
+.itemIcon+.itemIcon-text {
+	display: block;
+}
+
+.thing-properties {
+	margin-left: -5px;
+	padding-left: 5px;
+}
+
+.thing-properties+table {
+	width: 0%;
+}
+
+md-chips .md-chip-remove-container {
+	display: none;
+}
+
+.md-chips:not(.md-readonly) .md-chip:not(.md-readonly) {
+	padding-right: 4px;
+	margin-right: 3px;
+}
+
+md-chips strong {
+	font-weight: normal;
+}
+
+.scriptChips .md-chip {
+	font-size: 13px;
+	line-height: 19px;
+	height: 19px;
+	padding: 0 4px 0px 8px;
+}
+
+.scriptChips md-chips-wrap {
+	padding-bottom: 0px;
+	margin-right: 15px;
+}
+
+.scriptChips .md-chip-input-container, .scriptChips .md-chip-input-container:not(:first-child) {
+	height: 20px;
+	margin-top: 0px;
+}
+
+.scriptChips .md-chips .md-chip {
+	margin: 0 0 4px 0;
+}
+
+.scriptfield {
+	border: 1px solid #e5e5e5;
+}
+
+
+.datePicker > div {
+    width:77%;
+}
+.noerror>div{
+	border-bottom-color: rgb(224,224,224) !important;
+}
+
+.thingContainer {
+	padding-left: 0px;
+}
+
+.things .thing {
+	padding-left: 15px
+}
+
+.things>.new {
+	border-top: 1px solid #e6ffe6;
+	background-color: #e6ffe6;
+	box-shadow: 0 0 10px #e6e6e6;
+}
+
+.things>.new.lastThing {
+    padding-bottom: 1px;
+}
+
+.things .actions.new {
+	background-color: #e6ffe6;
+}
+
+.thing.fab-item:focus {
+	outline: 0;
+}
+
+.thing .cbody {
+	margin-bottom: 10px;
+}
+
+.fab-item hr.border-line {
+	margin: 0px;
+}
+
+.material-icons.color-remove {
+	font-size: 12px;
+	margin-top: 10px;
+	cursor: pointer;
+	color: grey;
+}
+
+.configContainer.dayOfWeek {
+	padding-right: 0px;
+}
+
+.md-button.dow-button, .md-button.dow-button:hover {
+	width: 35px;
+	height: 35px;
+	line-height: 35px;
+	margin-left: 5px;
+	margin-right: 5px;
+	background-color: #bfbfbf;
+	font-size: 14px;
+	z-index: 20;
+	min-width: 0;
+	vertical-align: middle;
+	box-shadow: 0 2px 5px 0 rgba(0, 0, 0, .26);
+	border-radius: 50%;
+	background-clip: padding-box;
+	overflow: hidden;
+	transition: all .3s cubic-bezier(.55, 0, .55, .2);
+	transition-property: background-color, box-shadow, -webkit-transform;
+	transition-property: background-color, box-shadow, transform;
+}
+
+.md-button.dow-button.dow-selected {
+	background-color: #4CAF50;
+}
+
+@media all and (min-width: 1200px) {
+	.md-button.dow-button, .md-button.dow-button:hover {
+		margin-left: 8px;
+		margin-right: 8px;
+	}
+	.dayParameter {
+		padding-right: 30px;
+	}}
+
+@media all and (max-width: 768px) {
+	.dayParameter {
+		padding-right: 32px;
+	}
+}
+
+md-dialog-content .dayParameter {
+	width: 100%
+}
+
+.dayParameter>div {
+	min-height: 48px;
+}
+
+.container.itemConfig .md-select-value {
+	padding: 2px 2px 1px 2px;
+}
+
+.container.itemConfig md-select {
+	max-height: 30px;
+}
+
+.container .itemSet {
+	margin-top: 10px;
+}
+
+.itemSet md-chips {
+	padding-bottom: 10px;
+}
+
+.includeConfig .parameter .hint h1 {
+    font-size:15px;
+}
+
+.includeConfig .parameter .hint h2 {
+    font-size:14px;
+}
+
+.includeConfig .parameter .hint h3 {
+    font-size:13px;
+}
+
+.includeConfig .parameter .hint h4 {
+    font-size:12px;
+}
+
+.includeConfig .parameter .hint h5 {
+    font-size:11px;
+}
+
+.includeConfig .parameter .hint h6 {
+    font-size:10px;
+}
+
+.icontrol .control-button {
+	min-height: 35px;
+	min-width: 35px;
+}
+
+.item-content .actions i, .linkedItems .action i {
+	margin: 5px 12px 5px 12px;
+	transition: box-shadow .4s;
+	border-radius: 100%;
+	border: 5px solid transparent;
+	width: 34px;
+	height: 34px;
+	outline: 0;
+}
+
+.item-content .actions i:hover, .rules .actions span:hover, .linkedItems .action i:hover {
+	cursor: pointer;
+	box-shadow: 0px 0px 4px 2px #dedede;
+}
+
+.rules .actions span {
+	transition: box-shadow .4s;
+	border-radius: 100%;
+	border: 5px solid transparent;
+	width: 34px;
+	height: 34px;
+	outline: 0;
+}
+
+.rules .disabled {
+background-color: #b8030c;
+}
+
+.rules .idle {
+background-color: #ebdd25;
+}
+
+.rules .running {
+background-color: green;
+}
+
+.ruleStatus {
+	padding-bottom: 10px;
+}
+
+.configAdvance {
+	margin-top: 48px;
+	float: right;
+}
+
+@media all and (max-width: 600px) {
+    .rule .actions i,.item-content .actions i{
+        margin:1px;
+    }
+    .container {
+    padding-left:8px;
+    padding-right:4px;
+    }   
+}
+
+.item-content p, .item-content h3 {
+    word-wrap: normal;
+    text-overflow:ellipsis;
+    overflow:hidden;
+}
+
+.fill-height {
+	height: 100%;
+}
+
+.rules-container {
+	margin-left: 20px;
+	margin-right: 20px;
+}
+
+.linkedItems {
+	
+/*     background-color:#e6e6e6 */
+}
+
+.linkedItems>div{
+	border-bottom: 1px solid #ddd;
+    margin: 5px;
+}
+
+.linkedItems .circle {
+	width:34px;
+	height:34px;
+	line-height:34px;
+	font-size:15px;
+}
+
+.fab-item .linkedItems button.md-fab {
+	position:relative;
+}
+
+.linkedItems>.row {
+	padding-bottom: 10px;
+	margin-top: 10px;
+}
+
+.linkedItems>.row>.action  {
+	text-align: right;
+	margin-top: 2px;
+}
+
+.linkedItems>.row>.action>i {
+	text-align: center;
+	width: 32px;
+	height: 32px;
+	margin: 0px;
+	font-size: 20px;
+}
+
+.linkedItems>.row>.name {
+	margin-top: 7px;
+	color: rgba(0, 0, 0, .87);
+	padding-left: 0px;
+}
+
+.linkedItems>.row>.name small {
+    color: #777;
+}
+
+.dropdown dt a {
+	display: block;
+	padding: 8px 20px 5px 10px;
+	min-height: 25px;
+	line-height: 24px;
+	border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+	padding: 2px;
+}
+
+.dropdown dt input {
+	width: 70%;
+	outline: none;
+	border: 0px;
+	font-weight: 300;
+    font-size: 15px;
+    color: rgba(0,0,0,0.72);
+}
+
+.dropdown dt i.enableColor {
+	color: #4CAF50;
+}
+
+.dropdown dd ul {
+	background-color: #fff;
+	border: 0;
+	color: black;
+	display: none;
+	left: 0px;
+	padding: 2px 15px 2px 5px;
+	position: absolute;
+	top: 1px;
+	list-style: none;
+	max-height: 150px;
+	overflow: auto;
+	z-index: 100;
+	border: 1px solid #ccc;
+	border-top: 0px;
+	box-shadow: 0 1px 3px 0 rgba(0, 0, 0, .2), 0 1px 1px 0
+		rgba(0, 0, 0, .14), 0 2px 1px -1px rgba(0, 0, 0, .12);
+	font-size: 14px;
+	width:97%;
+}
+
+.dropdown dd ul li a {
+	padding: 5px;
+	display: block;
+}
+
+.dropdown dd ul li {
+	height: 32px;
+	margin-top: 8px;
+}
+
+.dropdown dd ul li input {
+	float: right;
+}
+
+.dropdown dd ul li a:hover {
+	background-color: #fff;
+}
+
+.dropdown a, .dropdown a:visited, .dropdown a:hover {
+	color: #ccc;
+	cursor: pointer;
+	text-decoration: none;
+	outline: none;
+	font-size: 12px;
+}
+
+.dropdown dd, .dropdown dt {
+	margin: 0px;
+	padding-left: 0px;
+	padding-top: 2px;
+}
+
+.material-icons.copy-clipboard {
+	font-size:13px;
+	margin-left: 10px;
+	cursor:pointer;
+}

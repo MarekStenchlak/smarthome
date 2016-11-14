@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2016 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -12,15 +12,19 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-import org.eclipse.smarthome.config.core.validation.ConfigValidationException;
+import org.eclipse.smarthome.config.core.Configuration;
 import org.eclipse.smarthome.core.common.registry.AbstractRegistry;
+import org.eclipse.smarthome.core.common.registry.Provider;
 import org.eclipse.smarthome.core.thing.Bridge;
 import org.eclipse.smarthome.core.thing.Channel;
 import org.eclipse.smarthome.core.thing.ChannelUID;
 import org.eclipse.smarthome.core.thing.Thing;
+import org.eclipse.smarthome.core.thing.ThingProvider;
 import org.eclipse.smarthome.core.thing.ThingRegistry;
+import org.eclipse.smarthome.core.thing.ThingTypeUID;
 import org.eclipse.smarthome.core.thing.ThingUID;
 import org.eclipse.smarthome.core.thing.binding.ThingHandler;
+import org.eclipse.smarthome.core.thing.binding.ThingHandlerFactory;
 import org.eclipse.smarthome.core.thing.events.ThingEventFactory;
 import org.eclipse.smarthome.core.thing.internal.ThingTracker.ThingTrackerEvent;
 import org.slf4j.Logger;
@@ -34,11 +38,17 @@ import org.slf4j.LoggerFactory;
  * @author Chris Jackson - ensure thing added event is sent before linked events
  * @auther Thomas Höfer - Added config description validation exception to updateConfiguration operation
  */
-public class ThingRegistryImpl extends AbstractRegistry<Thing, ThingUID>implements ThingRegistry {
+public class ThingRegistryImpl extends AbstractRegistry<Thing, ThingUID, ThingProvider> implements ThingRegistry {
 
     private Logger logger = LoggerFactory.getLogger(ThingRegistryImpl.class.getName());
 
     private List<ThingTracker> thingTrackers = new CopyOnWriteArrayList<>();
+
+    private List<ThingHandlerFactory> thingHandlerFactories = new CopyOnWriteArrayList<>();
+
+    public ThingRegistryImpl() {
+        super(ThingProvider.class);
+    }
 
     /**
      * Adds a thing tracker.
@@ -58,10 +68,12 @@ public class ThingRegistryImpl extends AbstractRegistry<Thing, ThingUID>implemen
      * org.eclipse.smarthome.core.thing.ThingRegistry#getByUID(java.lang.String)
      */
     @Override
-    public Thing get(ThingUID uid) {
-        for (Thing thing : getAll()) {
-            if (thing.getUID().equals(uid)) {
-                return thing;
+    public Thing get(final ThingUID uid) {
+        for (final Map.Entry<Provider<Thing>, Collection<Thing>> entry : elementMap.entrySet()) {
+            for (final Thing thing : entry.getValue()) {
+                if (uid.equals(thing.getUID())) {
+                    return thing;
+                }
             }
         }
         return null;
@@ -78,8 +90,7 @@ public class ThingRegistryImpl extends AbstractRegistry<Thing, ThingUID>implemen
     }
 
     @Override
-    public void updateConfiguration(ThingUID thingUID, Map<String, Object> configurationParameters)
-            throws ConfigValidationException {
+    public void updateConfiguration(ThingUID thingUID, Map<String, Object> configurationParameters) {
         Thing thing = get(thingUID);
         if (thing != null) {
             ThingHandler thingHandler = thing.getHandler();
@@ -234,6 +245,30 @@ public class ThingRegistryImpl extends AbstractRegistry<Thing, ThingUID>implemen
         for (Thing thing : getAll()) {
             thingTracker.thingRemoved(thing, ThingTrackerEvent.TRACKER_REMOVED);
         }
+    }
+
+    @Override
+    public Thing createThingOfType(ThingTypeUID thingTypeUID, ThingUID thingUID, ThingUID bridgeUID, String label,
+            Configuration configuration) {
+        logger.debug("Creating thing for type '{}'.", thingTypeUID);
+        for (ThingHandlerFactory thingHandlerFactory : thingHandlerFactories) {
+            if (thingHandlerFactory.supportsThingType(thingTypeUID)) {
+                Thing thing = thingHandlerFactory.createThing(thingTypeUID, configuration, thingUID, bridgeUID);
+                thing.setLabel(label);
+                return thing;
+            }
+        }
+        logger.warn("Cannot create thing. No binding found that supports creating a thing" + " of type {}.",
+                thingTypeUID);
+        return null;
+    }
+
+    protected void addThingHandlerFactory(ThingHandlerFactory thingHandlerFactory) {
+        this.thingHandlerFactories.add(thingHandlerFactory);
+    }
+
+    protected void removeThingHandlerFactory(ThingHandlerFactory thingHandlerFactory) {
+        this.thingHandlerFactories.remove(thingHandlerFactory);
     }
 
 }

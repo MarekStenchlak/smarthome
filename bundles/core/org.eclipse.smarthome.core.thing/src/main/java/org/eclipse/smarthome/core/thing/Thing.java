@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2016 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -11,20 +11,20 @@ import java.util.List;
 import java.util.Map;
 
 import org.eclipse.smarthome.config.core.Configuration;
-import org.eclipse.smarthome.core.items.GroupItem;
 import org.eclipse.smarthome.core.items.Item;
 import org.eclipse.smarthome.core.thing.binding.ThingHandler;
-import org.eclipse.smarthome.core.thing.link.ItemThingLinkRegistry;
 
 /**
- * A {@link Thing} is a representation of a connected part (e.g. physical device
- * or cloud service) from the real world. It contains a list of {@link Channel} s, which can be bound to {@link Item}s.
- * A {@link Thing} might be connected
- * through a {@link Bridge}.
+ * A {@link Thing} is a representation of a connected part (e.g. physical device or cloud service) from the real world.
+ * It contains a list of {@link Channel}s, which can be bound to {@link Item}s.
+ * <p>
+ * A {@link Thing} might be connected through a {@link Bridge}.
+ * <p>
  *
  * @author Dennis Nobel - Initial contribution and API
  * @author Thomas Höfer - Added thing and thing type properties
- * @author Simon Kaufmann - Added label
+ * @author Simon Kaufmann - Added label, location
+ * @author Kai Kreuzer - Removed linked items from Thing
  */
 public interface Thing {
 
@@ -78,6 +78,7 @@ public interface Thing {
 
     /**
      * Gets the status of a thing.
+     * </p>
      * In order to get all status information (status, status detail and status description)
      * please use {@link Thing#getStatusInfo()}.
      *
@@ -87,6 +88,7 @@ public interface Thing {
 
     /**
      * Gets the status info of a thing.
+     * </p>
      * The status info consists of the status itself, the status detail and a status description.
      *
      * @return the status info
@@ -153,29 +155,6 @@ public interface Thing {
     ThingTypeUID getThingTypeUID();
 
     /**
-     * Returns the group item, which is linked to the thing or null if no item is
-     * linked.
-     *
-     * @deprecated Will be removed soon, because it is dynamic data which does not belong to the thing. Use
-     *             {@link ItemThingLinkRegistry} instead.
-     *
-     * @return group item , which is linked to the thing or null
-     */
-    @Deprecated
-    GroupItem getLinkedItem();
-
-    /**
-     * Returns whether the thing is linked to an item.
-     *
-     * @deprecated Will be removed soon, because it is dynamic data which does not belong to the thing. Use
-     *             {@link ItemThingLinkRegistry} instead.
-     *
-     * @return true if thing is linked, false otherwise.
-     */
-    @Deprecated
-    public boolean isLinked();
-
-    /**
      * Returns an immutable copy of the {@link Thing} properties.
      *
      * @return an immutable copy of the {@link Thing} properties (not null)
@@ -193,4 +172,28 @@ public interface Thing {
      * @return the previous value associated with the name, or null if there was no mapping for the name
      */
     String setProperty(String name, String value);
+
+    /**
+     * Updates all properties of the thing.
+     *
+     * @param properties the properties to set (must not be null)
+     */
+    void setProperties(Map<String, String> properties);
+
+    /**
+     * Get the physical location of the {@link Thing}.
+     *
+     * @return the location identifier (presumably an item name) or <code>null</code> if no location has been
+     *         configured.
+     */
+    String getLocation();
+
+    /**
+     * Set the physical location of the {@link Thing}.
+     *
+     * @param location the location identifier (preferably an item name) or <code>null</code> if no location has been
+     *            configured.
+     */
+    void setLocation(String location);
+
 }

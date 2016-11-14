@@ -1,7 +1,7 @@
 Manifest-Version: 1.0
 Bundle-Name: Eclipse SmartHome Basic UI
 Bundle-Vendor: Eclipse.org/SmartHome
-Bundle-Version: 0.8.0.qualifier
+Bundle-Version: 0.9.0.qualifier
 Bundle-Activator: org.eclipse.smarthome.ui.basic.internal.WebAppActivator
 Bundle-ManifestVersion: 2
 Bundle-License: http://www.eclipse.org/legal/epl-v10.html
@@ -20,7 +20,7 @@ Import-Package: com.google.gson,
  org.eclipse.smarthome.core.library.types,
  org.eclipse.smarthome.core.transform,
  org.eclipse.smarthome.core.types,
- org.eclipse.smarthome.io.net.http,
+ org.eclipse.smarthome.io.rest.sitemap,
  org.eclipse.smarthome.model.sitemap,
  org.eclipse.smarthome.ui.items,
  org.osgi.framework,

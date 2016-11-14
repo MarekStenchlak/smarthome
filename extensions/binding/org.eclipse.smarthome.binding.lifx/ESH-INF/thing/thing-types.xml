@@ -16,6 +16,11 @@
             <parameter name="deviceId" type="text" required="true">
                 <label>LIFX device ID</label>
             </parameter>
+            <parameter name="fadetime" type="integer" required="false">
+                <label>Fade time</label>
+                <description>The time to fade to the new color value (in ms).</description>
+                <default>300</default>
+            </parameter>
         </config-description>
         
     </thing-type>
@@ -33,6 +38,11 @@
             <parameter name="deviceId" type="text" required="true">
                 <label>LIFX device ID</label>
             </parameter>
+            <parameter name="fadetime" type="integer" required="false">
+                <label>Fade time</label>
+                <description>The time to fade to the new color value (in ms).</description>
+                <default>300</default>
+            </parameter>
         </config-description>
         
     </thing-type>
@@ -43,6 +53,9 @@
         <label>Color</label>
         <description>Selects the color of the light</description>
         <category>ColorLight</category>
+        <tags>
+            <tag>Lighting</tag>
+        </tags>
     </channel-type>
     
     <channel-type id="temperature">
@@ -57,6 +70,9 @@
         <label>Brightness</label>
         <description>Sets the brightness of the light</description>
         <category>DimmableLight</category>
+        <tags>
+            <tag>Lighting</tag>
+        </tags>
     </channel-type>
 
 </thing:thing-descriptions>

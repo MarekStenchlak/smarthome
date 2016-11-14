@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2016 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -8,10 +8,15 @@
 package org.eclipse.smarthome.io.rest.core.thing;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import javax.ws.rs.Consumes;
@@ -32,6 +37,9 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.UriInfo;
 
+import org.eclipse.smarthome.config.core.ConfigDescription;
+import org.eclipse.smarthome.config.core.ConfigDescriptionRegistry;
+import org.eclipse.smarthome.config.core.ConfigUtil;
 import org.eclipse.smarthome.config.core.Configuration;
 import org.eclipse.smarthome.config.core.status.ConfigStatusInfo;
 import org.eclipse.smarthome.config.core.status.ConfigStatusService;
@@ -48,14 +56,20 @@ import org.eclipse.smarthome.core.thing.Thing;
 import org.eclipse.smarthome.core.thing.ThingRegistry;
 import org.eclipse.smarthome.core.thing.ThingTypeUID;
 import org.eclipse.smarthome.core.thing.ThingUID;
+import org.eclipse.smarthome.core.thing.dto.ChannelDTO;
+import org.eclipse.smarthome.core.thing.dto.ChannelDTOMapper;
 import org.eclipse.smarthome.core.thing.dto.ThingDTO;
+import org.eclipse.smarthome.core.thing.dto.ThingDTOMapper;
 import org.eclipse.smarthome.core.thing.link.ItemChannelLink;
 import org.eclipse.smarthome.core.thing.link.ItemChannelLinkRegistry;
 import org.eclipse.smarthome.core.thing.link.ManagedItemChannelLinkProvider;
-import org.eclipse.smarthome.io.rest.ConfigUtil;
+import org.eclipse.smarthome.core.thing.type.ChannelKind;
+import org.eclipse.smarthome.core.thing.type.ThingType;
+import org.eclipse.smarthome.core.thing.type.ThingTypeRegistry;
+import org.eclipse.smarthome.core.thing.util.ThingHelper;
 import org.eclipse.smarthome.io.rest.JSONResponse;
 import org.eclipse.smarthome.io.rest.LocaleUtil;
-import org.eclipse.smarthome.io.rest.RESTResource;
+import org.eclipse.smarthome.io.rest.SatisfiableRESTResource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -70,14 +84,17 @@ import io.swagger.annotations.ApiResponses;
  * Jersey servlet.
  *
  * @author Dennis Nobel - Initial contribution
- * @author Kai Kreuzer - refactored for using the OSGi JAX-RS connector
+ * @author Kai Kreuzer - refactored for using the OSGi JAX-RS connector and
+ *         refactored create and update methods
  * @author Thomas Höfer - added validation of configuration
  * @author Yordan Zhelev - Added Swagger annotations
  * @author Jörg Plewe - refactoring, error handling
+ * @author Chris Jackson - added channel configuration updates
+ *         return empty set for config/status if no status available
  */
 @Path(ThingResource.PATH_THINGS)
 @Api(value = ThingResource.PATH_THINGS)
-public class ThingResource implements RESTResource {
+public class ThingResource implements SatisfiableRESTResource {
 
     private final Logger logger = LoggerFactory.getLogger(ThingResource.class);
 
@@ -92,6 +109,8 @@ public class ThingResource implements RESTResource {
     private ManagedThingProvider managedThingProvider;
     private ThingRegistry thingRegistry;
     private ConfigStatusService configStatusService;
+    private ConfigDescriptionRegistry configDescRegistry;
+    private ThingTypeRegistry thingTypeRegistry;
 
     @Context
     private UriInfo uriInfo;
@@ -104,15 +123,27 @@ public class ThingResource implements RESTResource {
      */
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
-    @ApiOperation(value = "Adds a new thing to the registry.")
+    @ApiOperation(value = "Creates a new thing and adds it to the registry.")
     @ApiResponses(value = { @ApiResponse(code = 200, message = "OK"),
-            @ApiResponse(code = 400, message = "No binding can create the thing.") })
+            @ApiResponse(code = 400, message = "A uid must be provided, if no binding can create a thing of this type."),
+            @ApiResponse(code = 409, message = "A thing with the same uid already exists.") })
     public Response create(@HeaderParam(HttpHeaders.ACCEPT_LANGUAGE) @ApiParam(value = "language") String language,
             @ApiParam(value = "thing data", required = true) ThingDTO thingBean) {
         final Locale locale = LocaleUtil.getLocale(language);
 
+        ThingUID thingUID = thingBean.UID == null ? null : new ThingUID(thingBean.UID);
         ThingTypeUID thingTypeUID = new ThingTypeUID(thingBean.thingTypeUID);
-        ThingUID thingUIDObject = new ThingUID(thingBean.UID);
+
+        if (thingUID != null) {
+            // check if a thing with this UID already exists
+            Thing thing = thingRegistry.get(thingUID);
+            if (thing != null) {
+                // report a conflict
+                return getThingResponse(Status.CONFLICT, thing, locale,
+                        "Thing " + thingUID.toString() + " already exists!");
+            }
+        }
+
         ThingUID bridgeUID = null;
 
         if (thingBean.bridgeUID != null) {
@@ -120,23 +151,40 @@ public class ThingResource implements RESTResource {
         }
 
         // turn the ThingDTO's configuration into a Configuration
-        Configuration configuration = getConfiguration(thingBean);
+        Configuration configuration = new Configuration(normalizeConfiguration(thingBean.configuration, thingTypeUID));
 
-        Status status;
-        Thing thing = thingRegistry.get(thingUIDObject);
+        Thing thing = thingRegistry.createThingOfType(thingTypeUID, thingUID, bridgeUID, thingBean.label,
+                configuration);
 
-        // does the Thing already exist?
-        if (null == thing) {
-            // if not, create new Thing
-            thing = managedThingProvider.createThing(thingTypeUID, thingUIDObject, bridgeUID, thingBean.label,
-                    configuration);
-            status = Status.CREATED;
+        if (thing != null) {
+            if (thingBean.properties != null) {
+                for (Entry<String, String> entry : thingBean.properties.entrySet()) {
+                    thing.setProperty(entry.getKey(), entry.getValue());
+                }
+            }
+            if (thingBean.channels != null) {
+                List<Channel> channels = new ArrayList<>();
+                for (ChannelDTO channelDTO : thingBean.channels) {
+                    channels.add(ChannelDTOMapper.map(channelDTO));
+                }
+                ThingHelper.addChannelsToThing(thing, channels);
+            }
+            if (thingBean.location != null) {
+                thing.setLocation(thingBean.location);
+            }
+        } else if (thingUID != null) {
+            // if there wasn't any ThingFactory capable of creating the thing,
+            // we create the Thing exactly the way we received it, i.e. we
+            // cannot take its thing type into account for automatically
+            // populating channels and properties.
+            thing = ThingDTOMapper.map(thingBean);
         } else {
-            // if so, report a conflict
-            status = Status.CONFLICT;
+            return getThingResponse(Status.BAD_REQUEST, thing, locale,
+                    "A UID must be provided, since no binding can create the thing!");
         }
 
-        return getThingResponse(status, thing, locale, "Thing " + thingUIDObject.toString() + " already exists!");
+        thingRegistry.add(thing);
+        return getThingResponse(Status.CREATED, thing, locale, null);
     }
 
     @GET
@@ -202,6 +250,12 @@ public class ThingResource implements RESTResource {
             String message = "Channel " + channelId + " for Thing " + thingUID + " does not exist!";
             return JSONResponse.createResponse(Status.NOT_FOUND, null, message);
         }
+        if (channel.getKind() != ChannelKind.STATE) {
+            logger.info("Tried to link channel '{}' of thing '{}', which is not of kind 'state'", channel, thingUID);
+            String message = "Channel " + channelId + " for Thing " + thingUID
+                    + " is not linkable, as it is not of kind 'state'!";
+            return JSONResponse.createResponse(Status.FORBIDDEN, null, message);
+        }
 
         try {
             itemRegistry.getItem(itemName);
@@ -220,9 +274,9 @@ public class ThingResource implements RESTResource {
     }
 
     /**
-     * Delete a Thing, if possible.
-     * Thing deletion might be impossible if the Thing is not managed, will return CONFLICT.
-     * Thing deletion might happen delayed, will return ACCEPTED.
+     * Delete a Thing, if possible. Thing deletion might be impossible if the
+     * Thing is not managed, will return CONFLICT. Thing deletion might happen
+     * delayed, will return ACCEPTED.
      *
      * @param thingUID
      * @param force
@@ -248,7 +302,8 @@ public class ThingResource implements RESTResource {
             return getThingNotFoundResponse(thingUID);
         }
 
-        // ask whether the Thing exists as a managed thing, so it can get updated, 409 otherwise
+        // ask whether the Thing exists as a managed thing, so it can get
+        // updated, 409 otherwise
         Thing managed = managedThingProvider.get(thingUIDObject);
         if (null == managed) {
             logger.info("Received HTTP DELETE request for update at '{}' for an unmanaged thing '{}'.",
@@ -323,11 +378,6 @@ public class ThingResource implements RESTResource {
         final Locale locale = LocaleUtil.getLocale(language);
 
         ThingUID thingUIDObject = new ThingUID(thingUID);
-        ThingUID bridgeUID = null;
-
-        if (thingBean.bridgeUID != null) {
-            bridgeUID = new ThingUID(thingBean.bridgeUID);
-        }
 
         // ask whether the Thing exists at all, 404 otherwise
         Thing thing = thingRegistry.get(thingUIDObject);
@@ -337,7 +387,8 @@ public class ThingResource implements RESTResource {
             return getThingNotFoundResponse(thingUID);
         }
 
-        // ask whether the Thing exists as a managed thing, so it can get updated, 409 otherwise
+        // ask whether the Thing exists as a managed thing, so it can get
+        // updated, 409 otherwise
         Thing managed = managedThingProvider.get(thingUIDObject);
         if (null == managed) {
             logger.info("Received HTTP PUT request for update at '{}' for an unmanaged thing '{}'.", uriInfo.getPath(),
@@ -346,12 +397,10 @@ public class ThingResource implements RESTResource {
                     "Cannot update Thing " + thingUID + ". Maybe it is not managed.");
         }
 
-        // only process if Thing is known to be managed, so it can get updated
-        thing.setBridgeUID(bridgeUID);
-        updateConfiguration(thing, getConfiguration(thingBean));
+        // check configuration
+        thingBean.configuration = normalizeConfiguration(thingBean.configuration, thing.getThingTypeUID());
 
-        // Update the label
-        thing.setLabel(thingBean.label);
+        thing = ThingHelper.merge(thing, thingBean);
 
         // update, returns null in case Thing cannot be found
         Thing oldthing = managedThingProvider.update(thing);
@@ -393,7 +442,8 @@ public class ThingResource implements RESTResource {
             return getThingNotFoundResponse(thingUID);
         }
 
-        // ask whether the Thing exists as a managed thing, so it can get updated, 409 otherwise
+        // ask whether the Thing exists as a managed thing, so it can get
+        // updated, 409 otherwise
         Thing managed = managedThingProvider.get(thingUIDObject);
         if (null == managed) {
             logger.info("Received HTTP PUT request for update configuration at '{}' for an unmanaged thing '{}'.",
@@ -404,7 +454,11 @@ public class ThingResource implements RESTResource {
 
         // only move on if Thing is known to be managed, so it can get updated
         try {
-            thingRegistry.updateConfiguration(thingUIDObject, ConfigUtil.normalizeTypes(configurationParameters));
+            // note that we create a Configuration instance here in order to
+            // have normalized types
+            thingRegistry.updateConfiguration(thingUIDObject,
+                    new Configuration(normalizeConfiguration(configurationParameters, thing.getThingTypeUID()))
+                            .getProperties());
         } catch (ConfigValidationException ex) {
             logger.debug("Config description validation exception occured for thingUID {} - Messages: {}", thingUID,
                     ex.getValidationMessages());
@@ -422,14 +476,24 @@ public class ThingResource implements RESTResource {
     @Path("/{thingUID}/config/status")
     @ApiOperation(value = "Gets thing's config status.")
     @ApiResponses(value = { @ApiResponse(code = 200, message = "OK"),
-            @ApiResponse(code = 404, message = "Config status for thing not found.") })
+            @ApiResponse(code = 404, message = "Thing not found.") })
     public Response getConfigStatus(@HeaderParam(HttpHeaders.ACCEPT_LANGUAGE) String language,
             @PathParam("thingUID") @ApiParam(value = "thing") String thingUID) throws IOException {
+        ThingUID thingUIDObject = new ThingUID(thingUID);
+
+        // Check if the Thing exists, 404 if not
+        Thing thing = thingRegistry.get(thingUIDObject);
+        if (null == thing) {
+            logger.info("Received HTTP GET request for thing config status at '{}' for the unknown thing '{}'.",
+                    uriInfo.getPath(), thingUID);
+            return getThingNotFoundResponse(thingUID);
+        }
+
         ConfigStatusInfo info = configStatusService.getConfigStatus(thingUID, LocaleUtil.getLocale(language));
         if (info != null) {
             return Response.ok().entity(info.getConfigStatusMessages()).build();
         }
-        return Response.status(Status.NOT_FOUND).build();
+        return Response.ok().entity(Collections.EMPTY_SET).build();
     }
 
     /**
@@ -448,11 +512,12 @@ public class ThingResource implements RESTResource {
      *
      * @param status
      * @param thing
-     * @param errormessage
+     * @param errormessage an optional error message (may be null), ignored if the status family is successful
      * @return Response
      */
     private Response getThingResponse(Status status, Thing thing, Locale locale, String errormessage) {
-        Object entity = null != thing ? EnrichedThingDTOMapper.map(thing, uriInfo.getBaseUri(), locale) : null;
+        Object entity = null != thing
+                ? EnrichedThingDTOMapper.map(thing, uriInfo.getBaseUri(), locale, getLinkedItemsMap(thing)) : null;
         return JSONResponse.createResponse(status, entity, errormessage);
     }
 
@@ -523,10 +588,20 @@ public class ThingResource implements RESTResource {
     private Set<EnrichedThingDTO> convertToListBean(Collection<Thing> things, Locale locale) {
         Set<EnrichedThingDTO> thingBeans = new LinkedHashSet<>();
         for (Thing thing : things) {
-            EnrichedThingDTO thingBean = EnrichedThingDTOMapper.map(thing, uriInfo.getBaseUri(), locale);
+            EnrichedThingDTO thingBean = EnrichedThingDTOMapper.map(thing, uriInfo.getBaseUri(), locale,
+                    getLinkedItemsMap(thing));
             thingBeans.add(thingBean);
         }
         return thingBeans;
+    }
+
+    private Map<String, Set<String>> getLinkedItemsMap(Thing thing) {
+        Map<String, Set<String>> linkedItemsMap = new HashMap<>();
+        for (Channel channel : thing.getChannels()) {
+            Set<String> linkedItems = itemChannelLinkRegistry.getLinkedItemNames(channel.getUID());
+            linkedItemsMap.put(channel.getUID().getId(), linkedItems);
+        }
+        return linkedItemsMap;
     }
 
     private Channel findChannel(String channelId, Thing thing) {
@@ -550,19 +625,53 @@ public class ThingResource implements RESTResource {
         }
     }
 
-    public static Configuration getConfiguration(ThingDTO thingBean) {
-        Configuration configuration = new Configuration();
-
-        Map<String, Object> convertDoublesToBigDecimal = ConfigUtil.normalizeTypes(thingBean.configuration);
-        configuration.setProperties(convertDoublesToBigDecimal);
-
-        return configuration;
-    }
-
     public static void updateConfiguration(Thing thing, Configuration configuration) {
         for (String parameterName : configuration.keySet()) {
             thing.getConfiguration().put(parameterName, configuration.get(parameterName));
         }
+    }
+
+    protected void setConfigDescriptionRegistry(ConfigDescriptionRegistry configDescriptionRegistry) {
+        this.configDescRegistry = configDescriptionRegistry;
+    }
+
+    protected void unsetConfigDescriptionRegistry(ConfigDescriptionRegistry configDescriptionRegistry) {
+        this.configDescRegistry = null;
+    }
+
+    protected void setThingTypeRegistry(ThingTypeRegistry thingTypeRegistry) {
+        this.thingTypeRegistry = thingTypeRegistry;
+    }
+
+    protected void unsetThingTypeRegistry(ThingTypeRegistry thingTypeRegistry) {
+        this.thingTypeRegistry = null;
+    }
+
+    private Map<String, Object> normalizeConfiguration(Map<String, Object> properties, ThingTypeUID thingTypeUID) {
+        if (properties == null || properties.isEmpty()) {
+            return properties;
+        }
+
+        ThingType thingType = thingTypeRegistry.getThingType(thingTypeUID);
+        if (thingType == null) {
+            return properties;
+        }
+
+        ConfigDescription configDesc = configDescRegistry.getConfigDescription(thingType.getConfigDescriptionURI());
+        if (configDesc == null) {
+            return properties;
+        }
+
+        return ConfigUtil.normalizeTypes(properties, configDesc);
+    }
+
+    @Override
+    public boolean isSatisfied() {
+        return itemChannelLinkRegistry != null && itemFactory != null && itemRegistry != null
+                && managedItemChannelLinkProvider != null && managedItemProvider != null && managedThingProvider != null
+                && thingRegistry != null && configStatusService != null && configDescRegistry != null
+                && thingTypeRegistry != null;
+
     }
 
 }

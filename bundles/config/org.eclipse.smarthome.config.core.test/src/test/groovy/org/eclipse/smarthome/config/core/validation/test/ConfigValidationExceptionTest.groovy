@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2016 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -64,6 +64,9 @@ class ConfigValidationExceptionTest {
     void setUp() {
         Activator.i18nProvider = [
             getText: { bundle, key, defaultText, locale, params ->
+                if(locale == null) {
+                    locale = Locale.ENGLISH;
+                }
                 if(MessageKey.PARAMETER_REQUIRED.key.equals(key)) {
                     if(DE.equals(locale)) {
                         TXT_DE1
@@ -79,14 +82,10 @@ class ConfigValidationExceptionTest {
                 }
             }
         ] as I18nProvider
-
-        defaultLocale = Locale.getDefault()
-        Locale.setDefault(Locale.ENGLISH)
     }
 
     @After
     void tearDown(){
-        Locale.setDefault(defaultLocale)
     }
 
     @Test

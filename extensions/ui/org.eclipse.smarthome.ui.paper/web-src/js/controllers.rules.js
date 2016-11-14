@@ -35,8 +35,8 @@ angular.module('PaperUI.controllers.rules', []).controller('RulesPageController'
 }).controller('RulesController', function($scope, $timeout, ruleRepository, ruleService, toastService, sharedProperties) {
     $scope.setHeaderText('Shows all rules.');
 
-    $scope.refresh = function() {
-        ruleRepository.getAll(true);
+    $scope.refresh = function(force) {
+        ruleRepository.getAll(null, force);
     };
 
     $scope.configure = function(rule) {
@@ -53,7 +53,7 @@ angular.module('PaperUI.controllers.rules', []).controller('RulesPageController'
         });
     };
 
-    ruleRepository.getAll(true);
+    $scope.refresh(false);
 
     $scope.removePart = function(opt, id) {
         sharedProperties.removeFromArray(opt, id);
@@ -63,8 +63,7 @@ angular.module('PaperUI.controllers.rules', []).controller('RulesPageController'
         ruleService.setEnabled({
             ruleUID : rule.uid
         }, (!rule.enabled).toString(), function() {
-            $scope.refresh();
-            if (rule.enabled) {
+            if (!rule.enabled) {
                 toastService.showDefaultToast('Rule disabled.');
             } else {
                 toastService.showDefaultToast('Rule enabled.');
@@ -89,7 +88,7 @@ angular.module('PaperUI.controllers.rules', []).controller('RulesPageController'
         $scope.setSubtitle([ rule.name ]);
         $scope.rule = rule;
     });
-}).controller('NewRuleController', function($scope, itemRepository, ruleService, toastService, $mdDialog, sharedProperties) {
+}).controller('NewRuleController', function($scope, itemRepository, ruleService, ruleRepository, toastService, $mdDialog, sharedProperties, moduleTypeService) {
     $scope.setSubtitle([ 'New Rule' ]);
     itemRepository.getAll();
     sharedProperties.reset();
@@ -97,11 +96,12 @@ angular.module('PaperUI.controllers.rules', []).controller('RulesPageController'
     var ruleUID = $scope.path[3];
 
     if ($scope.path[3]) {
-        ruleService.getByUid({
-            ruleUID : ruleUID
+        ruleRepository.getOne(function(rule) {
+            return rule.uid === ruleUID;
         }, function(data) {
             $scope.name = data.name;
             $scope.description = data.description;
+            $scope.status = data.status;
             setModuleArrays(data);
         });
         $scope.setSubtitle([ 'Configure' ]);
@@ -113,17 +113,24 @@ angular.module('PaperUI.controllers.rules', []).controller('RulesPageController'
     }
 
     function setModuleArrays(data) {
-        sharedProperties.addArray('trigger', data.triggers);
-        sharedProperties.addArray('action', data.actions);
-        sharedProperties.addArray('condition', data.conditions);
+        moduleTypeService.getByType({
+            mtype : 'trigger'
+        }).$promise.then(function(moduleData) {
+            sharedProperties.setModuleTypes(moduleData);
+            sharedProperties.addArray('trigger', data.triggers);
+            sharedProperties.addArray('action', data.actions);
+            sharedProperties.addArray('condition', data.conditions);
+        });
     }
 
     $scope.saveUserRule = function() {
 
         var rule = $scope.getRuleJSON(sharedProperties, null, $scope.name, $scope.description);
-        ruleService.add(rule);
-        toastService.showDefaultToast('Rule added.');
-        $scope.navigateTo('');
+        ruleService.add(rule).$promise.then(function() {
+            toastService.showDefaultToast('Rule added.');
+            $scope.navigateTo('');
+        });
+
     };
 
     $scope.updateUserRule = function() {
@@ -131,9 +138,10 @@ angular.module('PaperUI.controllers.rules', []).controller('RulesPageController'
         var rule = $scope.getRuleJSON(sharedProperties, $scope.path[3], $scope.name, $scope.description);
         ruleService.update({
             ruleUID : $scope.path[3]
-        }, rule);
-        toastService.showDefaultToast('Rule updated.');
-        $scope.navigateTo('');
+        }, rule).$promise.then(function() {
+            toastService.showDefaultToast('Rule updated.');
+            $scope.navigateTo('');
+        });
     };
 
     $scope.openNewModuleDialog = function(event, type) {
@@ -157,6 +165,13 @@ angular.module('PaperUI.controllers.rules', []).controller('RulesPageController'
     $scope.aTriggers = sharedProperties.getTriggersArray();
     $scope.aActions = sharedProperties.getActionsArray();
     $scope.aConditions = sharedProperties.getConditionsArray();
+
+    $scope.sortableOptions = {
+        handle : '.draggable',
+        update : function(e, ui) {
+        },
+        axis : 'y'
+    };
 
 }).controller('RuleConfigureController', function($scope, ruleRepository, ruleService, toastService) {
     $scope.setSubtitle([ 'Configure' ]);
@@ -194,26 +209,97 @@ angular.module('PaperUI.controllers.rules', []).controller('RulesPageController'
             sharedProperties.updateParams(value);
         });
         $scope.templateStep = 2;
-        $scope.configuration = {};
         $scope.parameters = sharedProperties.getParams();
+        $scope.configuration = configService.setConfigDefaults({}, $scope.parameters);
     };
 
     $scope.saveRule = function() {
         sharedProperties.resetParams();
+        $scope.configuration = configService.replaceEmptyValues($scope.configuration);
         var rule = {
             templateUID : $scope.templateData[$scope.templateIndex].uid,
             name : $scope.name,
             description : $scope.description,
             configuration : $scope.configuration
         };
-        ruleService.add(rule);
-        toastService.showDefaultToast('Rule added.');
-        $mdDialog.hide();
-        $location.path('rules/');
+        ruleService.add(rule).$promise.then(function() {
+            toastService.showDefaultToast('Rule added.');
+            $mdDialog.hide();
+            $location.path('rules/');
+        });
+
     };
 
     $scope.close = function() {
         sharedProperties.resetParams();
         $mdDialog.hide();
     };
+}).directive('dragdrop', function() {
+    return {
+        restrict : 'AE',
+        replace : true,
+        template : '<span class="draggable md-icon-reorder"></span>',
+        link : function(scope, elem, attrs) {
+
+            var touchHandler = function(event) {
+                var touch = event.changedTouches[0];
+                var simulatedEvent = document.createEvent("MouseEvent");
+                simulatedEvent.initMouseEvent({
+                    touchstart : "mousedown",
+                    touchmove : "mousemove",
+                    touchend : "mouseup"
+                }[event.type], true, true, window, 1, touch.screenX, touch.screenY, touch.clientX, touch.clientY, false, false, false, false, 0, null);
+
+                touch.target.dispatchEvent(simulatedEvent);
+                event.preventDefault();
+            };
+            elem[0].addEventListener("touchstart", touchHandler, true);
+            elem[0].addEventListener("touchmove", touchHandler, true);
+            elem[0].addEventListener("touchend", touchHandler, true);
+            elem[0].addEventListener("touchcancel", touchHandler, true);
+        }
+    };
+}).directive('scriptarea', function() {
+    return {
+        restrict : 'A',
+        require : 'ngModel',
+        link : function(scope, elem, attrs, ngModel) {
+            elem.ready(function() {
+                setTimeout(function() {
+                    elem[0].style.cssText = 'height:auto;';
+                    elem[0].style.cssText = 'height:' + elem[0].scrollHeight + 'px';
+                }, 500);
+            });
+            var localAttrs = attrs;
+            var element = elem;
+            var resizeHandler = function(event) {
+                elem[0].style.cssText = 'height:auto;';
+                if (elem[0].value.length < 1) {
+                    elem[0].style.cssText = 'height:35px';
+                } else {
+                    elem[0].style.cssText = 'height:' + elem[0].scrollHeight + 'px';
+                }
+                validateAtrribute();
+            };
+            elem[0].addEventListener("keydown", resizeHandler, true);
+            elem[0].addEventListener("input", resizeHandler, true);
+            elem[0].addEventListener("cut", resizeHandler);
+            elem[0].addEventListener("blur", function() {
+                validateAtrribute();
+            });
+            function validateAtrribute() {
+                var modelArr = document.getElementsByName(attrs.name);
+                if (modelArr && modelArr.length > 0) {
+                    var modelValue = modelArr[0].value;
+                    if (modelValue && (modelValue.length < localAttrs.ngMinlength || modelValue.length > localAttrs.ngMaxlength)) {
+                        element.addClass('border-invalid');
+                    } else if ((modelValue === undefined || modelValue == "") && localAttrs.ngRequired) {
+                        element.addClass('border-invalid');
+                    } else {
+                        element.removeClass('border-invalid');
+                    }
+                }
+            }
+        }
+    }
 });

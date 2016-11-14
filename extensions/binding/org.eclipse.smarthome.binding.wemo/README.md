@@ -26,8 +26,18 @@ The binding does not need any special configuration
 For manual Thing configuration, one needs to know the UUID of a certain WeMo device.
 In the thing file, this looks e.g. like
 ```
-[wemo:Socket-1-0-xxxxxx:Socket]
+wemo:socket:Switch1 [udn="Socket-1_0-221242K11xxxxx"]
 ```
+For a WeMo Link bridge and paired LED Lights, please use the following Thing definition
+
+```
+Bridge wemo:bridge:Bridge-1_0-231445B01006A0 [udn="Bridge-1_0-231445B010xxxx"] {
+MZ100 94103EA2B278xxxx [ deviceID="94103EA2B278xxxx" ]
+MZ100 94103EA2B278xxxx [ deviceID="94103EA2B278xxxx" ]
+}
+```
+
+
 
 ## Channels
 
@@ -35,6 +45,8 @@ Devices support some of the following channels:
 
 | Channel Type ID | Item Type    | Description  |
 |-----------------|------------------------|--------------|----------------- |------------- |
+| motionDetection | Switch | On if motion is detected, off otherwise. (Motion Sensor only) |
+| lastMotionDetected | DateTime | Representing the Date and Time when the last motion was detected. (Motion Sensor only) |
 | state | Switch       | This channel controls the actual binary State of a Device or represents Motion Detection. |
 | lastChangedAt | DateTime | Representing the Date and Time the device was last turned on or of. |
 | lastOnFor | Number       | Time in seconds an Insight device was last turned on for. |
@@ -52,22 +64,35 @@ Devices support some of the following channels:
 ## Full Example
 
 demo.things:
+
 ```
-wemo:socket:11111111111
+wemo:socket:Switch1 [udn="Socket-1_0-221242K11xxxxx"]
+wemo:motion:Sensor1 [udn="Sensor-1_0-221337L11xxxxx"]
+Bridge wemo:bridge:Bridge-1_0-231445B010xxxx [udn="Bridge-1_0-231445B010xxxx"] {
+MZ100 94103EA2B278xxxx [ deviceID="94103EA2B278xxxx" ]
+MZ100 94103EA2B278xxxx [ deviceID="94103EA2B278xxxx" ]
+}
 ```
 
 demo.items:
+
 ```
-Switch DemoSwitch    { channel="wemo:socket:1234567:state" }
-Switch LightSwitch   { channel="wemo:lightswitch:1234567:state" }
-Switch MotionSensor  { channel="wemo:Motion:1234567:state" }
-Number InsightPower  { channel="wemo:insight:1234567:currentpower" }
-Number InsightLastOn { channel="wemo:insight:1234567:lastOnFor" }
-Number InsightToday  { channel="wemo:insight:1234567:onToday" }
-Number InsightTotal  { channel="wemo:insight:1234567:onTotal" }
+Switch DemoSwitch    { channel="wemo:socket:Switch1:state" }
+Switch LightSwitch   { channel="wemo:lightswitch:Lightswitch1:state" }
+Switch MotionSensor  { channel="wemo:Motion:Sensor1:motionDetection" }
+Switch MotionDetected  { channel="wemo:Motion:Sensor1:lastMotionDetected" }
+Number InsightPower  { channel="wemo:insight:Insight1:currentPower" }
+Number InsightLastOn { channel="wemo:insight:Insight1:lastOnFor" }
+Number InsightToday  { channel="wemo:insight:Insight1:onToday" }
+Number InsightTotal  { channel="wemo:insight:Insight1:onTotal" }
+Switch LED1 { channel="wemo:MZ100:Bridge-1_0-231445B010xxxx:94103EA2B278xxxx:state" }
+Dimmer dLED1 { channel="wemo:MZ100:Bridge-1_0-231445B010xxxx:94103EA2B278xxxx:brightness" }
+Switch LED2 { channel="wemo:MZ100:Bridge-1_0-231445B010xxxx:94103EA2B278xxxx:state" }
+Dimmer dLED2 { channel="wemo:MZ100:Bridge-1_0-231445B010xxxx:94103EA2B278xxxx:brightness" }
 ```
 
 demo.sitemap:
+
 ```
 sitemap demo label="Main Menu"
 {
@@ -79,6 +104,10 @@ sitemap demo label="Main Menu"
 			Number item=InsightLastOn
 			Number item=InsightToday
 			Number item=InsightTotal
+			Switch item=LED1
+			Slider item=dLED1
+			Switch item=LED2
+			Slider item=dLED2
 		}
 }
 ```

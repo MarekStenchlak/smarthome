@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2016 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  */
 package org.eclipse.smarthome.core.thing.link;
 
+import org.eclipse.smarthome.core.items.ItemUtil;
 import org.eclipse.smarthome.core.thing.UID;
 
 /**
@@ -31,7 +32,14 @@ public abstract class AbstractLink {
 
     private final String itemName;
 
+    /**
+     * Constructor.
+     *
+     * @param itemName the item name for the link
+     * @throws IllegalArgumentException if the item name is invalid
+     */
     public AbstractLink(String itemName) {
+        ItemUtil.assertValidItemName(itemName);
         this.itemName = itemName;
     }
 

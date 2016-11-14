@@ -1,7 +1,9 @@
-angular.module('PaperUI.controllers.control', []).controller('ControlPageController', function($scope, $routeParams, $location, $timeout, itemRepository) {
+angular.module('PaperUI.controllers.control', []).controller('ControlPageController', function($scope, $routeParams, $location, $timeout, itemRepository, thingTypeRepository, thingService, thingTypeService, channelTypeService, thingConfigService) {
     $scope.items = [];
     $scope.selectedIndex = 0;
     $scope.tabs = [];
+    $scope.things = [];
+    var thingTypes = [];
 
     $scope.next = function() {
         var newIndex = $scope.selectedIndex + 1;
@@ -21,31 +23,128 @@ angular.module('PaperUI.controllers.control', []).controller('ControlPageControl
     $scope.refresh = function() {
         itemRepository.getAll(function(items) {
             $scope.tabs = [];
-            $scope.tabs.push({
-                name : 'all',
-                label : 'All'
-            });
-            $scope.items['All'] = items;
-            for (var int = 0; int < items.length; int++) {
-                var item = items[int];
-                if (item.tags.indexOf('home-group') > -1) {
-                    $scope.tabs.push({
-                        name : item.name,
-                        label : item.label
-                    });
-                }
-            }
+            // $scope.items['All'] = items;
         }, true);
+    }
+    $scope.channelTypes = [];
+    $scope.thingTypes = [];
+    $scope.thingChannels = [];
+    $scope.isLoadComplete = false;
+    var thingList, thingCounter = 0;
+    function getThings() {
+        thingService.getAll().$promise.then(function(things) {
+            thingList = things;
+            $scope.isLoadComplete = false;
+            thingTypeService.getAll().$promise.then(function(thingTypes) {
+                $scope.thingTypes = thingTypes;
+                channelTypeService.getAll().$promise.then(function(channels) {
+                    $scope.channelTypes = channels;
+                    for (var i = 0; i < thingList.length; i++) {
+                        var thingTypeUIDs = thingList[i].thingTypeUID;
+                        var enclosed = (function() {
+                            var thingTypeUID = thingTypeUIDs;
+                            var index = i;
+                            return function() {
+                                var thingTypeComplete = getThingTypeLocal(thingTypeUID);
+                                if (!thingTypeComplete) {
+                                    thingTypeService.getByUid({
+                                        thingTypeUID : thingTypeUID
+                                    }, function(thingType) {
+                                        thingTypes.push(thingType);
+                                        renderThing(thingList[index], thingType, $scope.channelTypes);
+                                    });
+                                } else {
+                                    renderThing(thingList[index], thingTypeComplete, $scope.channelTypes);
+                                }
+                            }
+                        })();
+                        enclosed();
+                    }
+                });
+            });
+
+        });
+    }
+    function renderThing(thing, thingType, channelTypes) {
+        thing.thingChannels = thingConfigService.getThingChannels(thing, thingType, channelTypes, true);
+        angular.forEach(thing.thingChannels, function(value, key) {
+            thing.thingChannels[key].channels = $.grep(thing.thingChannels[key].channels, function(channel, i) {
+                return channel.linkedItems.length > 0;
+            });
+        });
+        thingCounter++;
+        if (thingHasChannels(thing)) {
+            $scope.things.push(thing);
+        }
+        getTabs();
+    }
+    function thingHasChannels(thing) {
+        for (var i = 0; i < thing.thingChannels.length; i++) {
+            if (thing.thingChannels[i].channels && thing.thingChannels[i].channels.length > 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function getTabs() {
+        if (!$scope.things || (thingList.length != thingCounter)) {
+            return;
+        }
+        var arr = [], otherTab = false;
+        for (var i = 0; i < $scope.things.length; i++) {
+            if ($scope.things[i].location && $scope.things[i].location.toUpperCase() != "OTHER") {
+                $scope.things[i].location = $scope.things[i].location.toUpperCase();
+                arr[$scope.things[i].location] = $scope.things[i].location;
+            } else {
+                $scope.things[i].location = "OTHER";
+                otherTab = true;
+            }
+        }
+        for ( var value in arr) {
+            $scope.tabs.push({
+                name : value
+            });
+        }
+        if (otherTab) {
+            $scope.tabs.push({
+                name : "OTHER"
+            });
+        }
+        $scope.isLoadComplete = true;
+    }
+
+    function getThingTypeLocal(thingTypeUID) {
+        var thingTypeComplete = $.grep(thingTypes, function(thingType) {
+            return thingType.UID == thingTypeUID;
+        });
+        return thingTypeComplete.length > 0 ? thingTypeComplete : null;
+    }
+
+    $scope.tabComparator = function(actual, expected) {
+        return actual == expected;
     }
 
     $scope.getItem = function(itemName) {
         for (var int = 0; int < $scope.data.items.length; int++) {
             var item = $scope.data.items[int];
             if (item.name === itemName) {
+                if (item.type && (item.type == "Number" || item.groupType == "Number")) {
+                    var parsedValue = Number(item.state);
+                    if (isNaN(parsedValue)) {
+                        item.state = null;
+                    } else {
+                        item.state = parsedValue;
+                    }
+                }
                 return item;
             }
         }
         return null;
+    }
+
+    $scope.getThingsForTab = function(tabName) {
+        // todo: filter things for tabs here
     }
 
     $scope.getItemsForTab = function(tabName) {
@@ -59,7 +158,7 @@ angular.module('PaperUI.controllers.control', []).controller('ControlPageControl
             }
             return items;
         } else {
-            return getItem(tabName).members;
+            return this.getItem(tabName).members;
         }
     }
 
@@ -75,7 +174,10 @@ angular.module('PaperUI.controllers.control', []).controller('ControlPageControl
         $scope.masonry();
     });
     $scope.refresh();
-}).controller('ControlController', function($scope, $timeout, itemService) {
+    getThings();
+
+}).controller('ControlController', function($scope, $timeout, $filter, itemService) {
+
     $scope.getItemName = function(itemName) {
         return itemName.replace(/_/g, ' ');
     }
@@ -84,9 +186,20 @@ angular.module('PaperUI.controllers.control', []).controller('ControlPageControl
         if (item.state === 'NULL' || item.state === 'UNDEF') {
             return '-';
         }
-        var state = item.type === 'NumberItem' ? parseFloat(item.state) : item.state;
+        if ($scope.isOptionList(item)) {
+            for (var i = 0; i < item.stateDescription.options.length; i++) {
+                var option = item.stateDescription.options[i]
+                if (option.value === item.state) {
+                    return option.label
+                }
+            }
+        }
+        var state = item.type === 'Number' ? parseFloat(item.state) : item.state;
 
-        if (!item.stateDescription || !item.stateDescription.pattern) {
+        if (item.type === 'DateTime') {
+            var date = new Date(item.state);
+            return $filter('date')(date, "dd.MM.yyyy hh:mm:ss");
+        } else if (!item.stateDescription || !item.stateDescription.pattern) {
             return state;
         } else {
             return sprintf(item.stateDescription.pattern, state);
@@ -94,7 +207,7 @@ angular.module('PaperUI.controllers.control', []).controller('ControlPageControl
     }
 
     $scope.getMinText = function(item) {
-        if (!item.stateDescription || !item.stateDescription.minimum) {
+        if (!item.stateDescription || isNaN(item.stateDescription.minimum)) {
             return '';
         } else if (!item.stateDescription.pattern) {
             return item.stateDescription.minimum;
@@ -104,7 +217,7 @@ angular.module('PaperUI.controllers.control', []).controller('ControlPageControl
     }
 
     $scope.getMaxText = function(item) {
-        if (!item.stateDescription || !item.stateDescription.maximum) {
+        if (!item.stateDescription || isNaN(item.stateDescription.maximum)) {
             return '';
         } else if (!item.stateDescription.pattern) {
             return item.stateDescription.maximum;
@@ -124,7 +237,8 @@ angular.module('PaperUI.controllers.control', []).controller('ControlPageControl
         'Contact' : {},
         'DimmableLight' : {
             label : 'Brightness',
-            icon : 'wb_incandescent'
+            icon : 'wb_incandescent',
+            showSwitch : true
         },
         'CarbonDioxide' : {
             label : 'CO2'
@@ -150,8 +264,7 @@ angular.module('PaperUI.controllers.control', []).controller('ControlPageControl
         'Smoke' : {},
         'SoundVolume' : {
             label : 'Volume',
-            icon : 'volume_up',
-            hideSwitch : true
+            icon : 'volume_up'
         },
         'Switch' : {},
         'Temperature' : {
@@ -192,11 +305,11 @@ angular.module('PaperUI.controllers.control', []).controller('ControlPageControl
             return defaultIcon;
         }
     }
-    $scope.isHideSwitch = function(itemCategory) {
+    $scope.showSwitch = function(itemCategory) {
         if (itemCategory) {
             var category = categories[itemCategory];
             if (category) {
-                return category.hideSwitch;
+                return category.showSwitch;
             }
         }
         return false;
@@ -247,6 +360,9 @@ angular.module('PaperUI.controllers.control', []).controller('ControlPageControl
     };
 
 }).controller('SwitchItemController', function($scope, $timeout, itemService) {
+    if ($scope.item.state === 'UNDEF' || $scope.item.state === 'NULL') {
+        $scope.item.state = '-';
+    }
     $scope.setOn = function(state) {
         $scope.sendCommand(state);
     }
@@ -292,6 +408,9 @@ angular.module('PaperUI.controllers.control', []).controller('ControlPageControl
     });
 }).controller('ColorItemController', function($scope, $timeout, $element, itemService) {
 
+    if ($scope.item.state === 'UNDEF' || $scope.item.state === 'NULL') {
+        $scope.item.state = '-';
+    }
     function getStateAsObject(state) {
         var stateParts = state.split(",");
         if (stateParts.length == 3) {
@@ -316,52 +435,34 @@ angular.module('PaperUI.controllers.control', []).controller('ControlPageControl
     $scope.pending = false;
 
     $scope.setBrightness = function(brightness) {
-        // send updates every 300 ms only
-        if (!$scope.pending) {
-            $timeout(function() {
-                var stateObject = getStateAsObject($scope.item.state);
-                stateObject.b = $scope.brightness === 0 ? '0' : $scope.brightness;
-                stateObject.s = $scope.saturation === 0 ? '0' : $scope.saturation;
-                stateObject.h = $scope.hue === 0 ? '0' : $scope.hue;
-                $scope.item.state = toState(stateObject);
-                $scope.sendCommand($scope.item.state);
-                $scope.pending = false;
-            }, 300);
-            $scope.pending = true;
-        }
+        $scope.brightness = brightness;
+        setColor();
     }
 
     $scope.setHue = function(hue) {
+        $scope.hue = hue;
+        setColor();
+    }
+
+    $scope.setSaturation = function(saturation) {
+        $scope.saturation = saturation;
+        setColor();
+    }
+
+    function setColor() {
         // send updates every 300 ms only
         if (!$scope.pending) {
             $timeout(function() {
                 var stateObject = getStateAsObject($scope.item.state);
-                stateObject.h = $scope.hue === 0 ? '0' : $scope.hue;
-                stateObject.b = $scope.brightness === 0 ? '0' : $scope.brightness;
-                stateObject.s = $scope.saturation === 0 ? '0' : $scope.saturation;
-                if ($scope.item.state == "UNDEF" || $scope.item.state === 'NULL') {
+                stateObject.b = isNaN($scope.brightness) ? '0' : $scope.brightness;
+                stateObject.s = isNaN($scope.saturation) ? '0' : $scope.saturation;
+                stateObject.h = isNaN($scope.hue) ? '0' : $scope.hue;
+                if ($scope.item.state == "UNDEF" || $scope.item.state === 'NULL' || $scope.item.state === '-') {
                     stateObject.b = 100;
                     stateObject.s = 100;
                     $scope.brightness = stateObject.b;
                     $scope.saturation = stateObject.s;
                 }
-                $scope.item.state = toState(stateObject);
-                $scope.sendCommand($scope.item.state);
-                $scope.pending = false;
-            }, 300);
-            $scope.pending = true;
-        }
-
-    }
-
-    $scope.setSaturation = function(saturation) {
-        // send updates every 300 ms only
-        if (!$scope.pending) {
-            $timeout(function() {
-                var stateObject = getStateAsObject($scope.item.state);
-                stateObject.s = $scope.saturation === 0 ? '0' : $scope.saturation;
-                stateObject.b = $scope.brightness === 0 ? '0' : $scope.brightness;
-                stateObject.h = $scope.hue === 0 ? '0' : $scope.hue;
                 $scope.item.state = toState(stateObject);
                 $scope.sendCommand($scope.item.state);
                 $scope.pending = false;
@@ -423,7 +524,52 @@ angular.module('PaperUI.controllers.control', []).controller('ControlPageControl
     if ($scope.item.state === 'UNDEF' || $scope.item.state === 'NULL') {
         $scope.item.state = '-';
     }
-}).controller('PlayerItemController', function($scope) {
+}).controller('PlayerItemController', function($scope, $timeout) {
+
+    var isInterrupted, time;
+    $scope.onPrevDown = function() {
+        isInterrupted = false;
+        time = new Date().getTime();
+        $timeout(function() {
+            if (!isInterrupted) {
+                $scope.sendCommand('REWIND');
+            }
+        }, 300);
+    }
+
+    $scope.onPrevUp = function() {
+        var newTime = new Date().getTime();
+        if (time + 300 > newTime) {
+            isInterrupted = true;
+            $scope.sendCommand('PREVIOUS');
+        } else {
+            $timeout(function() {
+                $scope.sendCommand('PLAY');
+            });
+        }
+    }
+
+    $scope.onNextDown = function() {
+        isInterrupted = false;
+        time = new Date().getTime();
+        $timeout(function() {
+            if (!isInterrupted) {
+                $scope.sendCommand('FASTFORWARD');
+            }
+        }, 300);
+    }
+
+    $scope.onNextUp = function() {
+        var newTime = new Date().getTime();
+        if (time + 300 > newTime) {
+            isInterrupted = true;
+            $scope.sendCommand('NEXT');
+        } else {
+            $timeout(function() {
+                $scope.sendCommand('PLAY');
+            });
+        }
+    }
 
 }).controller('LocationItemController', function($scope, $sce) {
     $scope.init = function() {
@@ -433,7 +579,7 @@ angular.module('PaperUI.controllers.control', []).controller('ControlPageControl
             var bbox = (longitude - 0.01) + ',' + (latitude - 0.01) + ',' + (longitude + 0.01) + ',' + (latitude + 0.01);
             var marker = latitude + ',' + longitude;
             $scope.formattedState = latitude + '°N ' + longitude + '°E';
-            $scope.url = $sce.trustAsResourceUrl('http://www.openstreetmap.org/export/embed.html?bbox=' + bbox + '&marker=' + marker);
+            $scope.url = $sce.trustAsResourceUrl('https://www.openstreetmap.org/export/embed.html?bbox=' + bbox + '&marker=' + marker);
         } else {
             $scope.formattedState = '- °N - °E';
         }
@@ -442,4 +588,9 @@ angular.module('PaperUI.controllers.control', []).controller('ControlPageControl
         $scope.init();
     });
     $scope.init();
-});
+}).directive('itemStateDropdown', function() {
+    return {
+        restrict : 'A',
+        templateUrl : "partials/item.state.dropdown.html"
+    };
+})

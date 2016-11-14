@@ -44,5 +44,21 @@
         }
       }
     ]
+  },
+  {  
+    "uid": "ItemSampleRuleWithReferences",
+    "name": "ItemSampleRuleWithReferences",
+    "templateUID": "TemplateSampleRuleWithReferences",
+    "tags": [  
+      "sample",
+      "item",
+      "jsonTest",
+      "rule",
+      "references"
+    ],
+    "configuration": {  
+      "triggerItem": "myMotionItem",
+      "actionItem": "myLampItem"
+    }
   }
 ]

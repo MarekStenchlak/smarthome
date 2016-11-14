@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2016 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -44,6 +44,7 @@ import org.eclipse.smarthome.core.items.ItemNotFoundException;
 import org.eclipse.smarthome.core.items.ItemRegistry;
 import org.eclipse.smarthome.core.items.ManagedItemProvider;
 import org.eclipse.smarthome.core.items.dto.GroupItemDTO;
+import org.eclipse.smarthome.core.items.dto.ItemDTOMapper;
 import org.eclipse.smarthome.core.items.events.ItemEventFactory;
 import org.eclipse.smarthome.core.library.items.RollershutterItem;
 import org.eclipse.smarthome.core.library.items.SwitchItem;
@@ -54,11 +55,9 @@ import org.eclipse.smarthome.core.types.State;
 import org.eclipse.smarthome.core.types.TypeParser;
 import org.eclipse.smarthome.io.rest.JSONResponse;
 import org.eclipse.smarthome.io.rest.LocaleUtil;
-import org.eclipse.smarthome.io.rest.RESTResource;
+import org.eclipse.smarthome.io.rest.SatisfiableRESTResource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.base.Strings;
 
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -90,7 +89,7 @@ import io.swagger.annotations.ApiResponses;
  */
 @Path(ItemResource.PATH_ITEMS)
 @Api(value = ItemResource.PATH_ITEMS)
-public class ItemResource implements RESTResource {
+public class ItemResource implements SatisfiableRESTResource {
 
     private final Logger logger = LoggerFactory.getLogger(ItemResource.class);
 
@@ -99,9 +98,6 @@ public class ItemResource implements RESTResource {
 
     @Context
     UriInfo uriInfo;
-
-    @Context
-    UriInfo localUriInfo;
 
     private ItemRegistry itemRegistry;
     private EventPublisher eventPublisher;
@@ -157,7 +153,7 @@ public class ItemResource implements RESTResource {
 
     @GET
     @Path("/{itemname: [a-zA-Z_0-9]*}")
-    @Produces({ MediaType.WILDCARD })
+    @Produces({ MediaType.APPLICATION_JSON })
     @ApiOperation(value = "Gets a single item.", response = EnrichedItemDTO.class)
     @ApiResponses(value = { @ApiResponse(code = 200, message = "OK"),
             @ApiResponse(code = 404, message = "Item not found") })
@@ -414,7 +410,7 @@ public class ItemResource implements RESTResource {
     }
 
     @DELETE
-    @Path("/{itemname: [a-zA-Z_0-9]*}/tags/{tag: [a-zA-Z_0-9]*}")
+    @Path("/{itemname: [a-zA-Z_0-9]*}/tags/{tag}")
     @ApiOperation(value = "Removes a tag from an item.")
     @ApiResponses(value = { @ApiResponse(code = 200, message = "OK"),
             @ApiResponse(code = 404, message = "Item not found."),
@@ -465,27 +461,13 @@ public class ItemResource implements RESTResource {
             return Response.status(Status.BAD_REQUEST).build();
         }
 
-        GenericItem newItem = null;
-
-        if (item.type != null && item.type.equals("GroupItem")) {
-            GenericItem baseItem = null;
-            if (!Strings.isNullOrEmpty(item.groupType)) {
-                baseItem = createItem(item.groupType, itemname);
-            }
-            newItem = new GroupItem(itemname, baseItem);
-        } else {
-            String itemType = item.type.substring(0, item.type.length() - 4);
-            newItem = createItem(itemType, itemname);
-        }
+        ActiveItem newItem = ItemDTOMapper.map(item, itemFactories);
 
         if (newItem == null) {
             logger.warn("Received HTTP PUT request at '{}' with an invalid item type '{}'.", uriInfo.getPath(),
                     item.type);
             return Response.status(Status.BAD_REQUEST).build();
         }
-
-        // See if an existing item of this name exists.
-        Item existingItem = getItem(itemname);
 
         // Update the label
         newItem.setLabel(item.label);
@@ -500,7 +482,7 @@ public class ItemResource implements RESTResource {
         }
 
         // Save the item
-        if (existingItem == null) {
+        if (getItem(itemname) == null) {
             // item does not yet exist, create it
             managedItemProvider.add(newItem);
             return getItemResponse(Status.CREATED, newItem, locale, null);
@@ -515,24 +497,6 @@ public class ItemResource implements RESTResource {
             return JSONResponse.createErrorResponse(Status.METHOD_NOT_ALLOWED,
                     "Cannot update non-managed Item " + itemname);
         }
-    }
-
-    /**
-     * helper: Create new item with name and type
-     *
-     * @param itemType type of the item
-     * @param itemname name of the item
-     * @return the newly created item
-     */
-    private GenericItem createItem(String itemType, String itemname) {
-        GenericItem newItem = null;
-        for (ItemFactory itemFactory : itemFactories) {
-            newItem = itemFactory.createItem(itemType, itemname);
-            if (newItem != null) {
-                break;
-            }
-        }
-        return newItem;
     }
 
     /**
@@ -594,5 +558,11 @@ public class ItemResource implements RESTResource {
             }
         }
         return beans;
+    }
+
+    @Override
+    public boolean isSatisfied() {
+        return itemRegistry != null && managedItemProvider != null && eventPublisher != null
+                && !itemFactories.isEmpty();
     }
 }

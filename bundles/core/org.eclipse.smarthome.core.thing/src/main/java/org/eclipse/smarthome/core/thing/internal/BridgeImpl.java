@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2016 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -14,6 +14,7 @@ import org.eclipse.smarthome.core.thing.Bridge;
 import org.eclipse.smarthome.core.thing.Thing;
 import org.eclipse.smarthome.core.thing.ThingTypeUID;
 import org.eclipse.smarthome.core.thing.ThingUID;
+import org.eclipse.smarthome.core.thing.binding.BridgeHandler;
 
 import com.google.common.collect.ImmutableList;
 
@@ -61,6 +62,11 @@ public class BridgeImpl extends ThingImpl implements Bridge {
     @Override
     public List<Thing> getThings() {
         return ImmutableList.copyOf(things);
+    }
+
+    @Override
+    public BridgeHandler getHandler() {
+        return super.getHandler() instanceof BridgeHandler ? (BridgeHandler) super.getHandler() : null;
     }
 
 }

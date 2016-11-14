@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2016 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -17,11 +17,7 @@ import org.eclipse.xtext.resource.XtextResourceSet;
  */
 public class GlobalResourceSet {
 
-	private static ResourceSet INSTANCE = null;
-
-	public static ResourceSet getINSTANCE() {
-		if (INSTANCE == null)
-			INSTANCE = new XtextResourceSet();
-		return INSTANCE;
-	}
+    public static ResourceSet getINSTANCE() {
+        return new XtextResourceSet();
+    }
 }

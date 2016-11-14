@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2016 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -52,7 +52,7 @@ public class WebAppConfig {
         for (String key : cssClasses.keySet()) {
             Boolean value = cssDefaultValues.get(key);
             if (configProps.containsKey(key)) {
-                value = ((String) configProps.get(key)).equalsIgnoreCase("true");
+                value = configProps.get(key).toString().equalsIgnoreCase("true");
             }
             if (value) {
                 cssClassList.add(cssClasses.get(key));

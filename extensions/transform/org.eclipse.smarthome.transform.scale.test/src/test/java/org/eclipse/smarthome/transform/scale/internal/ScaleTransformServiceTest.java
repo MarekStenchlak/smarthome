@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2016 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -8,6 +8,8 @@
 package org.eclipse.smarthome.transform.scale.internal;
 
 import static org.junit.Assert.fail;
+
+import java.util.Locale;
 
 import org.eclipse.smarthome.core.transform.TransformationException;
 import org.junit.Assert;
@@ -22,7 +24,12 @@ public class ScaleTransformServiceTest {
 
     @Before
     public void init() {
-        processor = new ScaleTransformationService();
+        processor = new ScaleTransformationService() {
+            @Override
+            protected Locale getLocale() {
+                return Locale.US;
+            }
+        };
     }
 
     @Test

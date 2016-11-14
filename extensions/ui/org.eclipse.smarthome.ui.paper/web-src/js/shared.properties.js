@@ -1,11 +1,11 @@
 'use strict';
 
-angular.module('PaperUI.controllers.rules').service('sharedProperties', function() {
+angular.module('PaperUI.controllers').service('sharedProperties', function() {
     var triggersArray = [];
     var actionsArray = [];
     var conditionsArray = [];
-    var tId = 1, aId = 1, cId = 1;
     var params = [];
+    var moduleTypes = [];
     return {
         updateParams : function(elem) {
             params.push(elem);
@@ -20,23 +20,23 @@ angular.module('PaperUI.controllers.rules').service('sharedProperties', function
             arr.type = type;
             var self = this;
             angular.forEach(arr, function(value) {
-                self.updateModule(arr.type, value);
+                if (self.searchVisibleType(arr, value.type) == -1) {
+                    self.updateModule(arr.type, value);
+                }
             });
         },
         updateModule : function(type, value) {
             var modArr = this.getModuleArray(type);
-
+            var maxId = this.getMaxModuleId();
             if (!value.id) {
-                value.id = type + "_" + tId;
+                value.id = maxId;
                 modArr.push(value);
-                tId++;
             } else {
                 var index = this.searchArray(modArr, value.id);
                 if (index != -1) {
                     modArr[index] = value;
                 } else {
                     modArr.push(value);
-                    tId++;
                 }
             }
         },
@@ -57,7 +57,7 @@ angular.module('PaperUI.controllers.rules').service('sharedProperties', function
             angular.forEach(modArr, function(value) {
                 var type = typeof value.uid === "undefined" ? value.type : value.uid;
                 $moduleJSON.push({
-                    "id" : value.id ? value.id : modArr.mtype + "_" + i,
+                    "id" : value.id,
                     "label" : value.label,
                     "description" : value.description,
                     "type" : type,
@@ -72,10 +72,6 @@ angular.module('PaperUI.controllers.rules').service('sharedProperties', function
             triggersArray = [];
             actionsArray = [];
             conditionsArray = [];
-            tId = 1;
-            aId = 1;
-            cId = 1;
-
         },
         removeFromArray : function(opt, id) {
             var arr = null;
@@ -104,6 +100,18 @@ angular.module('PaperUI.controllers.rules').service('sharedProperties', function
 
         },
 
+        searchVisibleType : function(arr, type) {
+
+            var k;
+            for (k = 0; arr != null && k < arr.length; k = k + 1) {
+                if (arr[k].uid === type && arr[k].visibility.toUpperCase() === 'VISIBLE') {
+                    return k;
+                }
+            }
+            return -1;
+
+        },
+
         getModuleArray : function(type) {
             if (type == 'trigger') {
                 return triggersArray;
@@ -113,7 +121,65 @@ angular.module('PaperUI.controllers.rules').service('sharedProperties', function
                 return conditionsArray;
             }
 
-        }
+        },
 
+        setModuleTypes : function(mTypes) {
+            moduleTypes = mTypes;
+        },
+        getMaxModuleId : function() {
+            var max_id = 0;
+            var modules = [ 'trigger', 'action', 'condition' ];
+            for (var m = 0; m < modules.length; m++) {
+                var modArr = this.getModuleArray(modules[m]);
+                for (var i = 0; i < modArr.length; i++) {
+                    if (modArr[i].id && !isNaN(parseInt(modArr[i].id)) && parseInt(modArr[i].id) > max_id) {
+                        max_id = parseInt(modArr[i].id);
+                    }
+                }
+            }
+            return ++max_id;
+        }
     }
+});
+angular.module('PaperUI.constants').constant('itemConfig', {
+    'types' : [ 'Switch', 'Contact', 'String', 'Number', 'Dimmer', 'DateTime', 'Color', 'Image', 'Player', 'Location', 'Group' ],
+    'groupTypes' : [ 'Switch', 'Contact', 'Number', 'Dimmer', 'None' ],
+    'arithmeticFunctions' : [ {
+        name : "AVG",
+        value : "AVG"
+    }, {
+        name : "MAX",
+        value : "MAX"
+    }, {
+        name : "MIN",
+        value : "MIN"
+    }, {
+        name : "SUM",
+        value : "SUM"
+    } ],
+    'logicalFunctions' : [ {
+        name : "AND_ON_OFF",
+        value : "All ON → ON else OFF"
+    }, {
+        name : "NAND_ON_OFF",
+        value : "All ON → OFF else ON"
+    }, {
+        name : "OR_OFF_ON",
+        value : "All OFF → OFF else ON"
+    }, {
+        name : "NOR_ON_OFF",
+        value : "All OFF → ON else OFF"
+    }, {
+        name : "OR_ON_OFF",
+        value : "One ON → ON else OFF"
+    }, {
+        name : "NOR_ON_OFF",
+        value : "One ON → OFF else ON"
+    }, {
+        name : "AND_OFF_ON",
+        value : "One OFF → OFF else ON"
+    }, {
+        name : "NAND_OFF_ON",
+        value : "One OFF → ON else OFF"
+    } ]
 });

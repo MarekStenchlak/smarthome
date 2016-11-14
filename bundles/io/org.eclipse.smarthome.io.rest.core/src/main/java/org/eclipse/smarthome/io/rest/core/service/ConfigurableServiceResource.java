@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2016 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -8,7 +8,10 @@
 package org.eclipse.smarthome.io.rest.core.service;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -23,9 +26,12 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
+import org.eclipse.smarthome.config.core.ConfigDescription;
+import org.eclipse.smarthome.config.core.ConfigDescriptionRegistry;
+import org.eclipse.smarthome.config.core.ConfigUtil;
 import org.eclipse.smarthome.config.core.ConfigurableService;
 import org.eclipse.smarthome.config.core.Configuration;
-import org.eclipse.smarthome.io.rest.RESTResource;
+import org.eclipse.smarthome.io.rest.SatisfiableRESTResource;
 import org.eclipse.smarthome.io.rest.core.config.ConfigurationService;
 import org.eclipse.smarthome.io.rest.core.internal.RESTCoreActivator;
 import org.osgi.framework.Constants;
@@ -50,7 +56,7 @@ import io.swagger.annotations.ApiResponses;
  */
 @Path(ConfigurableServiceResource.PATH_SERVICES)
 @Api(value = ConfigurableServiceResource.PATH_SERVICES)
-public class ConfigurableServiceResource implements RESTResource {
+public class ConfigurableServiceResource implements SatisfiableRESTResource {
 
     /** The URI path to this resource */
     public static final String PATH_SERVICES = "services";
@@ -61,6 +67,7 @@ public class ConfigurableServiceResource implements RESTResource {
     private final Logger logger = LoggerFactory.getLogger(ConfigurableServiceResource.class);
 
     private ConfigurationService configurationService;
+    private ConfigDescriptionRegistry configDescRegistry;
 
     @GET
     @Produces({ MediaType.APPLICATION_JSON })
@@ -77,27 +84,36 @@ public class ConfigurableServiceResource implements RESTResource {
     @ApiOperation(value = "Get configurable service for given service ID.")
     @ApiResponses(value = { @ApiResponse(code = 200, message = "OK"), @ApiResponse(code = 404, message = "Not found") })
     public Response getById(@PathParam("serviceId") @ApiParam(value = "service ID", required = true) String serviceId) {
+        ConfigurableServiceDTO configurableService = getServiceById(serviceId);
+        if (configurableService != null) {
+            return Response.ok(configurableService).build();
+        } else {
+            return Response.status(404).build();
+        }
+    }
+
+    private ConfigurableServiceDTO getServiceById(String serviceId) {
         List<ConfigurableServiceDTO> configurableServices = getConfigurableServices();
         for (ConfigurableServiceDTO configurableService : configurableServices) {
             if (configurableService.id.equals(serviceId)) {
-                return Response.ok(configurableService).build();
+                return configurableService;
             }
         }
-        return Response.status(404).build();
+        return null;
     }
 
     @GET
     @Path("/{serviceId}/config")
     @Produces({ MediaType.APPLICATION_JSON })
     @ApiOperation(value = "Get service configuration for given service ID.")
-    @ApiResponses(value = { @ApiResponse(code = 200, message = "OK"), @ApiResponse(code = 404, message = "Not found"),
+    @ApiResponses(value = { @ApiResponse(code = 200, message = "OK"),
             @ApiResponse(code = 500, message = "Configuration can not be read due to internal error") })
     public Response getConfiguration(
             @PathParam("serviceId") @ApiParam(value = "service ID", required = true) String serviceId) {
         try {
             Configuration configuration = configurationService.get(serviceId);
             return configuration != null ? Response.ok(configuration.getProperties()).build()
-                    : Response.status(404).build();
+                    : Response.ok(Collections.emptyMap()).build();
         } catch (IOException ex) {
             logger.error("Cannot get configuration for service {}: " + ex.getMessage(), serviceId, ex);
             return Response.status(Status.INTERNAL_SERVER_ERROR).build();
@@ -117,13 +133,39 @@ public class ConfigurableServiceResource implements RESTResource {
             Map<String, Object> configuration) {
         try {
             Configuration oldConfiguration = configurationService.get(serviceId);
-            configurationService.update(serviceId, new Configuration(configuration));
+            configurationService.update(serviceId, new Configuration(normalizeConfiguration(configuration, serviceId)));
             return oldConfiguration != null ? Response.ok(oldConfiguration.getProperties()).build()
                     : Response.noContent().build();
         } catch (IOException ex) {
             logger.error("Cannot update configuration for service {}: " + ex.getMessage(), serviceId, ex);
             return Response.status(Status.INTERNAL_SERVER_ERROR).build();
         }
+    }
+
+    private Map<String, Object> normalizeConfiguration(Map<String, Object> properties, String serviceId) {
+        if (properties == null || properties.isEmpty()) {
+            return properties;
+        }
+
+        ConfigurableServiceDTO service = getServiceById(serviceId);
+        if (service == null) {
+            return properties;
+        }
+
+        URI uri;
+        try {
+            uri = new URI(service.configDescriptionURI);
+        } catch (URISyntaxException e) {
+            logger.warn("Not a valid URI: {}", service.configDescriptionURI);
+            return properties;
+        }
+
+        ConfigDescription configDesc = configDescRegistry.getConfigDescription(uri);
+        if (configDesc == null) {
+            return properties;
+        }
+
+        return ConfigUtil.normalizeTypes(properties, configDesc);
     }
 
     @DELETE
@@ -183,4 +225,18 @@ public class ConfigurableServiceResource implements RESTResource {
     protected void unsetConfigurationService(ConfigurationService configurationService) {
         this.configurationService = null;
     }
+
+    protected void setConfigDescriptionRegistry(ConfigDescriptionRegistry configDescriptionRegistry) {
+        this.configDescRegistry = configDescriptionRegistry;
+    }
+
+    protected void unsetConfigDescriptionRegistry(ConfigDescriptionRegistry configDescriptionRegistry) {
+        this.configDescRegistry = null;
+    }
+
+    @Override
+    public boolean isSatisfied() {
+        return configurationService != null && configDescRegistry != null;
+    }
+
 }

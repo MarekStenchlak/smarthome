@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2016 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -9,6 +9,7 @@ package org.eclipse.smarthome.core.service;
 
 import java.io.IOException;
 import java.nio.file.FileSystems;
+import java.nio.file.FileVisitOption;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -16,6 +17,7 @@ import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.WatchService;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.EnumSet;
 
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -77,7 +79,9 @@ public abstract class AbstractWatchService {
                 if (watchSubDirectories()) {
                     watchService = FileSystems.getDefault().newWatchService();
 
-                    Files.walkFileTree(toWatch, new SimpleFileVisitor<Path>() {
+                    // walk through all folders and follow symlinks
+                    Files.walkFileTree(toWatch, EnumSet.of(FileVisitOption.FOLLOW_LINKS), Integer.MAX_VALUE, 
+                    		new SimpleFileVisitor<Path>() {
                         @Override
                         public FileVisitResult preVisitDirectory(Path subDir, BasicFileAttributes attrs)
                                 throws IOException {

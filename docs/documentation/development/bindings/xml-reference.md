@@ -4,7 +4,7 @@ layout: documentation
 
 {% include base.html %}
 
-# Declaring Configurations, Bindings and Things 
+# Declaring Configurations, Bindings and Things
 
 Specific services and bindings have to provide meta information which is used for visualization, validation or internal service mapping. Meta information can be provided by registering specific services at the *OSGi* service registry or by specifying them in a declarative way, which is described in this chapter.
 
@@ -12,7 +12,7 @@ Specific services and bindings have to provide meta information which is used fo
 
 - Configuration descriptions: Used for visualization and validation of configuration properties (optional)
 - Binding definitions: Required to declare a binding (mandatory)
-- Bridge and *Thing* descriptions: Required to specify which bridges and *Thing*s are provided by the binding, which relations they have to each other and which channels they offer (mandatory) 
+- Bridge and *Thing* descriptions: Required to specify which bridges and *Thing*s are provided by the binding, which relations they have to each other and which channels they offer (mandatory)
 
 
 ## Configuration Descriptions
@@ -87,7 +87,7 @@ The following HTML tags are allowed -: ```<b>, <br>, <em>, <h1>, <h2>, <h3>, <h4
   <tr><td>parameter.groupName</td><td>Sets a group name for this parameter (optional).</td></tr>
   <tr><td>parameter.unit</td><td>Specifies the unit of measurements. The unit declaration in the parameter definition shown above contains the set of valid units. The unit must only be set if the type of the parameter is either integer or decimal (optional).</td></tr>
   <tr><td>advanced</td><td>Specifies that this is an advanced parameter. Advanced parameters may be hidden by a UI (optional).</td></tr>
-  <tr><td>context</td><td>The context of the configuration parameter (optional).</td></tr>
+  <tr><td>context</td><td>The context of the configuration parameter (optional). <a href='#supported-contexts'>Supported contexts</a></td></tr>
   <tr><td>required</td><td>The flag indicating if the configuration parameter has to be set or not (deprecated, optional, default: false).</td></tr>
   <tr><td>default</td><td>The default value of the configuration parameter (optional).</td></tr>
   <tr><td>label</td><td>A human-readable label for the configuration parameter (optional).</td></tr>
@@ -100,6 +100,34 @@ The following HTML tags are allowed -: ```<b>, <br>, <em>, <h1>, <h2>, <h3>, <h4
   <tr><td>criteria</td><td>The filter criteria for values of a dynamic selection list (optional).</td></tr>  
   <tr><td>criteria.name</td><td>The name of the context related filter.</td></tr>  
 </table>
+
+### Supported Contexts
+
+Context is used to provide some semantic details about the parameter. The UI use it to render different kind of input widgets. The following contexts require a specific format of the content:
+
+<table><tr><th>Name</th><th>Type</th><th>Format</th></tr>
+  <tr><td>Date</td><td>Text</td><td>DD:MM:YYYY</td></tr>
+  <tr><td>Time</td><td>Text/Integer</td><td>hh:mm/number</td></tr>
+  <tr><td>Color</td><td>Text</td><td>#000000 - #ffffff (hex color)</td></tr>
+  <tr><td>Item</td><td>Text</td><td>Item name</td></tr>
+  <tr><td>Thing</td><td>Text</td><td>UID of thing</td></tr>
+  <tr><td>Day of week</td><td>Text</td><td>MON, TUE, WED, THU, FRI, SAT, SUN <br></td></tr>
+</table>
+
+Further, the <strong>item</strong> context can contain criteria to filter the list of items. For example:
+
+```xml
+<filter>
+  <criteria name="type">Switch,Dimmer</criteria>
+  <criteria name="tag">Light,Heating</criteria>
+</filter>
+```
+
+In the case of above filter only those items will be shown that satisfy the filter's coniditions. The above filter is evaluated as follows: 
+
+```
+(type=Switch OR type=Dimmer) AND (tag=Light OR tag=Heating) 
+```
 
 Groups allow parameters to be grouped together into logical blocks so that the user can find the parameters they are looking for. A parameter can be placed into a group so that the UI knows how to display the information.
 <table>
@@ -150,7 +178,7 @@ The following code gives an example for one configuration description.
 
 ## Binding Definitions
 
-Every binding has to provide meta information such as author or description. The meta information of all bindings is accessible through the `org.eclipse.smarthome.core.binding.BindingInfoRegistry` service.
+Every binding has to provide meta information such as binding id or name. The meta information of all bindings is accessible through the `org.eclipse.smarthome.core.binding.BindingInfoRegistry` service.
 
 Although binding definitions are usually specified in a declarative way (as described in this section), they can also be provided as `org.eclipse.smarthome.core.binding.BindingInfo`.
 Any `BindingInfo` must be registered as service at the *OSGi* service registry. The full Java API for binding definitions can be found in the Java package `org.eclipse.smarthome.core.binding`.
@@ -186,7 +214,7 @@ Binding definitions must be placed as XML file(s) (with the ending `.xml`) in th
   <tr><td>binding.id</td><td>An identifier for the binding (mandatory).</td></tr>
   <tr><td>name</td><td>A human-readable name for the binding (mandatory).</td></tr>
   <tr><td>description</td><td>A human-readable description for the binding (optional).</td></tr>
-  <tr><td>author</td><td>The author of the binding (mandatory).</td></tr>
+  <tr><td>author</td><td>The author of the binding (optional).</td></tr>
   <tr><td>service-id</td><td>The ID (service.pid or component.name) of the main binding service, which can be configured through OSGi configuration admin service. Should only be used in combination with a config description definition (optional).</td></tr>
   <tr><td>config-description</td><td>The configuration description for the binding within the ConfigDescriptionRegistry (optional).</td></tr>
   <tr><td>config-description-ref</td><td>The reference to a configuration description for the binding within the ConfigDescriptionRegistry (optional).</td></tr>
@@ -294,6 +322,8 @@ Bridge and *Thing* descriptions must be placed as XML file(s) (with the ending `
 
   <channel-type id="channelTypeID" advanced="{true|false}">
     <item-type>Dimmer</item-type>
+    OR
+    <kind>trigger</kind>
     <label>String</label>
     <description>String</description>
     <category>String</category>
@@ -311,6 +341,15 @@ Bridge and *Thing* descriptions must be placed as XML file(s) (with the ending `
         ...
       </options>
     </state>
+    OR
+    <event>
+      <options>
+        <option value="String" />
+        OR
+        <option value="String">String</option>
+        ...
+      </options>
+    </event>
 
     <config-description>
       ...
@@ -364,7 +403,8 @@ Bridge and *Thing* descriptions must be placed as XML file(s) (with the ending `
   <tr><td><b>Property</b></td><td><b>Description</b></td></tr>
   <tr><td>channel-type.id</td><td>An identifier for the channel type (mandatory).</td></tr>
   <tr><td>channel-type.advanced</td><td>The flag indicating if this channel contains advanced functionalities which should be typically not shown in the basic view of user interfaces (optional, default: false).</td></tr>
-  <tr><td>item-type</td><td>An item type of the channel (mandatory). All item types are specified in <code>ItemFactory</code> instances. The following items belong to the core: <code>Switch, Rollershutter, Contact, String, Number, Dimmer, DateTime, Color, Image</code>.</td></tr>
+  <tr><td>kind</td><td>The kind of channel. <code>state</code> for channels which have a state, <code>trigger</code> for trigger channels. <code>state</code> is the default.</td></tr>
+  <tr><td>item-type</td><td>An item type of the channel (mandatory if kind <code>state</code>, which is the default). All item types are specified in <code>ItemFactory</code> instances. The following items belong to the core: <code>Switch, Rollershutter, Contact, String, Number, Dimmer, DateTime, Color, Image</code>.</td></tr>
   <tr><td>label</td><td>A human-readable label for the channel (mandatory).</td></tr>
   <tr><td>description</td><td>A human-readable description for the channel (optional).</td></tr>
   <tr><td>category</td><td>The category for the channel, e.g. <code>TEMPERATURE</code> (optional).</td></tr>
@@ -379,6 +419,10 @@ Bridge and *Thing* descriptions must be placed as XML file(s) (with the ending `
   <tr><td>options</td><td>A list restricting all possible values (optional).</td></tr>
   <tr><td>option</td><td>The description for the option (optional).</td></tr>
   <tr><td>option.value</td><td>The value for the option (mandatory).</td></tr>
+  <tr><td>event</td><td>The restrictions of an trigger event which gives information how to interpret it (optional).</td></tr>
+  <tr><td>options</td><td>A list restricting all possible values (optional).</td></tr>
+  <tr><td>option</td><td>The description for the option (optional).</td></tr>
+  <tr><td>option.value</td><td>The value for the option (mandatory).</td></tr>  
   <tr><td>config-description</td><td>The configuration description for the channel within the ConfigDescriptionRegistry (optional).</td></tr>
   <tr><td>config-description-ref</td><td>The reference to a configuration description for the channel within the ConfigDescriptionRegistry (optional).</td></tr>
   <tr><td>config-description-ref.uri</td><td>The URI of the configuration description for the channel within the ConfigDescriptionRegistry (mandatory).</td></tr>

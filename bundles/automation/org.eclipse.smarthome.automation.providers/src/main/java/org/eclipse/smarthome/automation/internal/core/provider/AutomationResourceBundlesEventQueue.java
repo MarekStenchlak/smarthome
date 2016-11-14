@@ -38,7 +38,7 @@ import org.slf4j.LoggerFactory;
  *
  */
 @SuppressWarnings("deprecation")
-class AutomationResourceBundlesEventQueue implements Runnable, BundleTrackerCustomizer<Object> {
+public class AutomationResourceBundlesEventQueue implements Runnable, BundleTrackerCustomizer<Object> {
 
     /**
      * This static field serves as criteria for recognizing bundles providing automation resources. If these bundles
@@ -110,7 +110,7 @@ class AutomationResourceBundlesEventQueue implements Runnable, BundleTrackerCust
         this.mProvider = mProvider;
         this.rImporter = rImporter;
         bTracker = new BundleTracker<Object>(bc, ~Bundle.UNINSTALLED, this);
-        pkgAdmin = bc.getService(bc.getServiceReference(PackageAdmin.class));
+        pkgAdmin = (PackageAdmin) bc.getService(bc.getServiceReference(PackageAdmin.class.getName()));
     }
 
     /**
@@ -160,7 +160,13 @@ class AutomationResourceBundlesEventQueue implements Runnable, BundleTrackerCust
             }
             Iterator<BundleEvent> events = l_queue.iterator();
             while (events.hasNext()) {
-                processBundleChanged(events.next());
+                BundleEvent event = events.next();
+                try {
+                    processBundleChanged(event);
+                } catch (Throwable t) {
+                    logger.warn("Processing bundle event {}, for automation resource bundle '{}' failed",
+                            event.getType(), event.getBundle().getSymbolicName(), t);
+                }
             }
             synchronized (this) {
                 if (shared) {
@@ -214,9 +220,8 @@ class AutomationResourceBundlesEventQueue implements Runnable, BundleTrackerCust
                 addEvent(bundle, event);
                 fillHostFragmentMapping(bundle);
             }
-            return bundle;
         }
-        return null;
+        return bundle;
     }
 
     /**
@@ -287,29 +292,16 @@ class AutomationResourceBundlesEventQueue implements Runnable, BundleTrackerCust
      */
     private List<Bundle> returnHostBundles(Bundle fragment) {
         List<Bundle> hosts = new ArrayList<Bundle>();
-        // R5 version of the code --->>>
-        // BundleWiring wiring = fragment.adapt(BundleWiring.class);
-        // if (wiring == null) {
-        // for (Entry<Bundle, List<Bundle>> entry : hostFragmentMapping.entrySet()) {
-        // if (entry.getValue().contains(fragment)) {
-        // Bundle host = entry.getKey();
-        // hosts.add(host);
-        // }
-        // }
-        // } else {
-        // List<BundleWire> wires = wiring.getRequiredWires(HostNamespace.HOST_NAMESPACE);
-        // if (wires != null && !wires.isEmpty()) {
-        // for (BundleWire wire : wires) {
-        // hosts.add(wire.getProvider().getBundle());
-        // }
-        // }
-        // }
-
-        // R4 version of the code --->>>
         Bundle[] bundles = pkgAdmin.getHosts(fragment);
-        if (bundles != null) {
+        if (bundles != null && bundles.length > 0) {
             for (int i = 0; i < bundles.length; i++) {
                 hosts.add(bundles[i]);
+            }
+        } else {
+            for (Bundle host : hostFragmentMapping.keySet()) {
+                if (hostFragmentMapping.get(host).contains(fragment)) {
+                    hosts.add(host);
+                }
             }
         }
         return hosts;
@@ -317,17 +309,6 @@ class AutomationResourceBundlesEventQueue implements Runnable, BundleTrackerCust
 
     private void fillHostFragmentMapping(Bundle host) {
         List<Bundle> fragments = new ArrayList<Bundle>();
-        // R5 version of the code --->>>
-        // BundleWiring wiring = host.adapt(BundleWiring.class);
-        // List<BundleWire> wires = wiring.getProvidedWires(HostNamespace.HOST_NAMESPACE);
-        // if (wires == null || wires.isEmpty()) {
-        // return;
-        // }
-        // for (BundleWire wire : wires) {
-        // fragments.add(wire.getRequirer().getBundle());
-        // }
-
-        // R4 version of the code --->>>
         Bundle[] bundles = pkgAdmin.getFragments(host);
         if (bundles != null) {
             for (int i = 0; i < bundles.length; i++) {
@@ -428,9 +409,6 @@ class AutomationResourceBundlesEventQueue implements Runnable, BundleTrackerCust
             processFragmentBundleUpdated(returnHostBundles(bundle));
         } else {
             switch (event.getType()) {
-                case BundleEvent.UPDATED:
-                    processBundleUpdated(bundle);
-                    break;
                 case BundleEvent.UNINSTALLED:
                     processBundleUninstalled(bundle);
                     break;
@@ -442,23 +420,8 @@ class AutomationResourceBundlesEventQueue implements Runnable, BundleTrackerCust
 
     private void processFragmentBundleUpdated(List<Bundle> hosts) {
         for (Bundle host : hosts) {
-            processBundleUpdated(host);
+            processBundleDefault(host);
         }
-    }
-
-    private void processBundleUpdated(Bundle bundle) {
-        if (mProvider.isProviderProcessed(bundle)) {
-            mProvider.processAutomationProviderUninstalled(bundle);
-        }
-        mProvider.processAutomationProvider(bundle);
-        if (tProvider.isProviderProcessed(bundle)) {
-            tProvider.processAutomationProviderUninstalled(bundle);
-        }
-        tProvider.processAutomationProvider(bundle);
-        if (rImporter.isProviderProcessed(bundle)) {
-            rImporter.processAutomationProviderUninstalled(bundle);
-        }
-        rImporter.processAutomationProvider(bundle);
     }
 
     private void processBundleUninstalled(Bundle bundle) {
@@ -475,14 +438,8 @@ class AutomationResourceBundlesEventQueue implements Runnable, BundleTrackerCust
     }
 
     private void processBundleDefault(Bundle bundle) {
-        if (!mProvider.isProviderProcessed(bundle)) {
-            mProvider.processAutomationProvider(bundle);
-        }
-        if (!tProvider.isProviderProcessed(bundle)) {
-            tProvider.processAutomationProvider(bundle);
-        }
-        if (!rImporter.isProviderProcessed(bundle)) {
-            rImporter.processAutomationProvider(bundle);
-        }
+        mProvider.processAutomationProvider(bundle);
+        tProvider.processAutomationProvider(bundle);
+        rImporter.processAutomationProvider(bundle);
     }
 }

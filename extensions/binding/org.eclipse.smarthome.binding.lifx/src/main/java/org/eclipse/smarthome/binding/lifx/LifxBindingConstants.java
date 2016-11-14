@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2016 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -26,6 +26,7 @@ public class LifxBindingConstants {
 
     // config property for the LIFX device id
     public static final String CONFIG_PROPERTY_DEVICE_ID = "deviceId";
+    public static final String CONFIG_PROPERTY_FADETIME = "fadetime";
 
     // config property for the interface to listen for broadcast UDP traffic
     public static final String CONFIG_PROPERTY_INTERFACE_ID = "interface";

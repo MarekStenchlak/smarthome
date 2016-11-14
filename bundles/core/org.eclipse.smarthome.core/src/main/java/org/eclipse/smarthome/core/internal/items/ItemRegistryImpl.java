@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2016 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -19,6 +19,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.eclipse.smarthome.core.common.registry.AbstractRegistry;
+import org.eclipse.smarthome.core.common.registry.Provider;
 import org.eclipse.smarthome.core.common.registry.RegistryChangeListener;
 import org.eclipse.smarthome.core.events.EventPublisher;
 import org.eclipse.smarthome.core.items.GenericItem;
@@ -28,6 +29,7 @@ import org.eclipse.smarthome.core.items.ItemNotFoundException;
 import org.eclipse.smarthome.core.items.ItemNotUniqueException;
 import org.eclipse.smarthome.core.items.ItemProvider;
 import org.eclipse.smarthome.core.items.ItemRegistry;
+import org.eclipse.smarthome.core.items.ItemUtil;
 import org.eclipse.smarthome.core.items.ItemsChangeListener;
 import org.eclipse.smarthome.core.items.ManagedItemProvider;
 import org.eclipse.smarthome.core.items.events.ItemEventFactory;
@@ -50,7 +52,8 @@ import org.slf4j.LoggerFactory;
  * @author Stefan Bußweiler - Migration to new event mechanism
  *
  */
-public class ItemRegistryImpl extends AbstractRegistry<Item, String>implements ItemRegistry, ItemsChangeListener {
+public class ItemRegistryImpl extends AbstractRegistry<Item, String, ItemProvider>
+        implements ItemRegistry, ItemsChangeListener {
 
     private final Logger logger = LoggerFactory.getLogger(ItemRegistryImpl.class);
 
@@ -60,6 +63,10 @@ public class ItemRegistryImpl extends AbstractRegistry<Item, String>implements I
             .synchronizedList(new ArrayList<StateDescriptionProvider>());
 
     private Map<String, Integer> stateDescriptionProviderRanking = new ConcurrentHashMap<>();
+
+    public ItemRegistryImpl() {
+        super(ItemProvider.class);
+    }
 
     @Override
     public void allItemsChanged(ItemProvider provider, Collection<String> oldItemNames) {
@@ -136,23 +143,24 @@ public class ItemRegistryImpl extends AbstractRegistry<Item, String>implements I
      */
     @Override
     public Item getItem(String name) throws ItemNotFoundException {
-
-        for (Item item : getItems()) {
-            if (item.getName().equals(name)) {
-                return item;
-            }
+        final Item item = get(name);
+        if (item == null) {
+            throw new ItemNotFoundException(name);
+        } else {
+            return item;
         }
-
-        throw new ItemNotFoundException(name);
     }
 
     @Override
-    public Item get(String itemName) {
-        try {
-            return getItem(itemName);
-        } catch (ItemNotFoundException ignored) {
-            return null;
+    public Item get(final String itemName) {
+        for (final Map.Entry<Provider<Item>, Collection<Item>> entry : elementMap.entrySet()) {
+            for (final Item item : entry.getValue()) {
+                if (itemName.equals(item.getName())) {
+                    return item;
+                }
+            }
         }
+        return null;
     }
 
     /*
@@ -222,11 +230,6 @@ public class ItemRegistryImpl extends AbstractRegistry<Item, String>implements I
         return matchedItems;
     }
 
-    @Override
-    public boolean isValidItemName(String name) {
-        return name.matches("[a-zA-Z0-9_]*");
-    }
-
     private void addToGroupItems(Item item, List<String> groupItemNames) {
         for (String groupName : groupItemNames) {
             try {
@@ -245,30 +248,26 @@ public class ItemRegistryImpl extends AbstractRegistry<Item, String>implements I
      * injected and its implementation is notified that it has just been
      * created, so it can perform any task it needs to do after its creation.
      *
-     * @param item
-     *            the item to initialize
+     * @param item the item to initialize
      * @throws IllegalArgumentException if the item has no valid name
      */
     private void initializeItem(Item item) throws IllegalArgumentException {
-        if (isValidItemName(item.getName())) {
-            if (item instanceof GenericItem) {
-                GenericItem genericItem = (GenericItem) item;
-                genericItem.setEventPublisher(eventPublisher);
-                genericItem.setStateDescriptionProviders(stateDescriptionProviders);
-                genericItem.initialize();
-            }
+        ItemUtil.assertValidItemName(item.getName());
 
-            if (item instanceof GroupItem) {
-                // fill group with its members
-                addMembersToGroupItem((GroupItem) item);
-            }
-
-            // add the item to all relevant groups
-            addToGroupItems(item, item.getGroupNames());
-        } else {
-            throw new IllegalArgumentException(
-                    "Ignoring item '" + item.getName() + "' as it does not comply with" + " the naming convention.");
+        if (item instanceof GenericItem) {
+            GenericItem genericItem = (GenericItem) item;
+            genericItem.setEventPublisher(eventPublisher);
+            genericItem.setStateDescriptionProviders(stateDescriptionProviders);
+            genericItem.initialize();
         }
+
+        if (item instanceof GroupItem) {
+            // fill group with its members
+            addMembersToGroupItem((GroupItem) item);
+        }
+
+        // add the item to all relevant groups
+        addToGroupItems(item, item.getGroupNames());
     }
 
     private void addMembersToGroupItem(GroupItem groupItem) {
@@ -399,14 +398,17 @@ public class ItemRegistryImpl extends AbstractRegistry<Item, String>implements I
         postEvent(ItemEventFactory.createUpdateEvent(element, oldElement));
     }
 
-    protected void activate(ComponentContext componentContext) {
+    protected void activate(final ComponentContext componentContext) {
+        super.activate(componentContext.getBundleContext());
         stateDescriptionProviderTracker = new StateDescriptionProviderTracker(componentContext.getBundleContext());
         stateDescriptionProviderTracker.open();
     }
 
-    protected void deactivate(ComponentContext componentContext) {
+    @Override
+    protected void deactivate() {
         stateDescriptionProviderTracker.close();
         stateDescriptionProviderTracker = null;
+        super.deactivate();
     }
 
     private final class StateDescriptionProviderTracker

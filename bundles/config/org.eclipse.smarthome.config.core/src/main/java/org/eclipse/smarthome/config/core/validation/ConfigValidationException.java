@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2016 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -22,12 +22,12 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 
 /**
- * Exception to be thrown if given {@link Configuration} parameters do not match their declaration in the
+ * A runtime exception to be thrown if given {@link Configuration} parameters do not match their declaration in the
  * {@link ConfigDescription}.
  *
  * @author Thomas Höfer - Initial contribution
  */
-public final class ConfigValidationException extends Exception {
+public final class ConfigValidationException extends RuntimeException {
 
     private static final long serialVersionUID = 1L;
 
@@ -84,8 +84,6 @@ public final class ConfigValidationException extends Exception {
      *         delivered)
      */
     public Map<String, String> getValidationMessages(Locale locale) {
-        Locale loc = locale != null ? locale : Locale.getDefault();
-
         ImmutableMap.Builder<String, String> builder = new ImmutableMap.Builder<>();
         for (ConfigValidationMessage configValidationMessage : configValidationMessages) {
             if (Activator.getI18nProvider() == null) {
@@ -96,7 +94,7 @@ public final class ConfigValidationException extends Exception {
                         MessageFormat.format(configValidationMessage.defaultMessage, configValidationMessage.content));
             } else {
                 String text = Activator.getI18nProvider().getText(bundle, configValidationMessage.messageKey,
-                        configValidationMessage.defaultMessage, loc, configValidationMessage.content);
+                        configValidationMessage.defaultMessage, locale, configValidationMessage.content);
                 builder.put(configValidationMessage.parameterName, text);
             }
         }

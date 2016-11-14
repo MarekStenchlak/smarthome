@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2016 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -25,6 +25,7 @@ import org.eclipse.smarthome.core.items.Item;
 import org.eclipse.smarthome.core.items.ItemNotFoundException;
 import org.eclipse.smarthome.core.items.ItemNotUniqueException;
 import org.eclipse.smarthome.core.items.ItemRegistry;
+import org.eclipse.smarthome.core.library.items.CallItem;
 import org.eclipse.smarthome.core.library.items.ColorItem;
 import org.eclipse.smarthome.core.library.items.ContactItem;
 import org.eclipse.smarthome.core.library.items.DateTimeItem;
@@ -47,6 +48,7 @@ import org.eclipse.smarthome.core.types.StateDescription;
 import org.eclipse.smarthome.core.types.Type;
 import org.eclipse.smarthome.core.types.UnDefType;
 import org.eclipse.smarthome.model.sitemap.ColorArray;
+import org.eclipse.smarthome.model.sitemap.Default;
 import org.eclipse.smarthome.model.sitemap.Group;
 import org.eclipse.smarthome.model.sitemap.LinkableWidget;
 import org.eclipse.smarthome.model.sitemap.Mapping;
@@ -173,7 +175,7 @@ public class ItemUIRegistryImpl implements ItemUIRegistry {
         for (ItemUIProvider provider : itemUIProviders) {
             Widget currentWidget = provider.getWidget(itemName);
             if (currentWidget != null) {
-                return currentWidget;
+                return resolveDefault(currentWidget);
             }
         }
         return null;
@@ -222,6 +224,9 @@ public class ItemUIRegistryImpl implements ItemUIRegistry {
             return SitemapFactory.eINSTANCE.createText();
         }
         if (itemType.equals(LocationItem.class)) {
+            return SitemapFactory.eINSTANCE.createText();
+        }
+        if (itemType.equals(CallItem.class)) {
             return SitemapFactory.eINSTANCE.createText();
         }
         if (itemType.equals(DimmerItem.class)) {
@@ -479,18 +484,17 @@ public class ItemUIRegistryImpl implements ItemUIRegistry {
             }
             if (w != null) {
                 w.setItem(id);
-                return w;
             } else {
                 try {
                     w = sitemap.getChildren().get(Integer.valueOf(id.substring(0, 2)));
                     for (int i = 2; i < id.length(); i += 2) {
                         w = ((LinkableWidget) w).getChildren().get(Integer.valueOf(id.substring(i, i + 2)));
                     }
-                    return w;
                 } catch (NumberFormatException e) {
                     // no valid number, so the requested page id does not exist
                 }
             }
+            return resolveDefault(w);
         }
         logger.warn("Cannot find page for id '{}'.", id);
         return null;
@@ -501,10 +505,38 @@ public class ItemUIRegistryImpl implements ItemUIRegistry {
      */
     @Override
     public EList<Widget> getChildren(LinkableWidget w) {
+        EList<Widget> widgets = null;
         if (w instanceof Group && w.getChildren().isEmpty()) {
-            return getDynamicGroupChildren((Group) w);
+            widgets = getDynamicGroupChildren((Group) w);
         } else {
-            return w.getChildren();
+            widgets = w.getChildren();
+        }
+
+        EList<Widget> result = new BasicEList<Widget>();
+        for (Widget widget : widgets) {
+            Widget resolvedWidget = resolveDefault(widget);
+            if (resolvedWidget != null) {
+                result.add(resolvedWidget);
+            }
+        }
+        return result;
+    }
+
+    private Widget resolveDefault(Widget widget) {
+        if (!(widget instanceof Default)) {
+            return widget;
+        } else {
+            if (widget.getItem() != null) {
+                Item item = itemRegistry.get(widget.getItem());
+                if (item != null) {
+                    Widget defaultWidget = getDefaultWidget(item.getClass(), item.getName());
+                    if (defaultWidget != null) {
+                        defaultWidget.setItem(item.getName());
+                        return defaultWidget;
+                    }
+                }
+            }
+            return null;
         }
     }
 
@@ -622,18 +654,6 @@ public class ItemUIRegistryImpl implements ItemUIRegistry {
             return itemRegistry.getItems(pattern);
         } else {
             return Collections.emptyList();
-        }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public boolean isValidItemName(String itemName) {
-        if (itemRegistry != null) {
-            return itemRegistry.isValidItemName(itemName);
-        } else {
-            return false;
         }
     }
 

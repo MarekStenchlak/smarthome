@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2016 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -66,16 +66,6 @@ public interface ItemRegistry extends Registry<Item, String> {
      * @return a collection of all items matching the search pattern
      */
     public Collection<Item> getItems(String pattern);
-
-    /**
-     * Checks whether itemName matches the item name conventions.
-     * Item names must only consist out of alpha-numerical characters and
-     * underscores (_).
-     *
-     * @param itemName the item name to validate
-     * @return true, if the name is valid
-     */
-    public boolean isValidItemName(String itemName);
 
     /**
      * Returns list of items which contains all of the given tags.

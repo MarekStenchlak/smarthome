@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2016 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -12,22 +12,36 @@ import java.util.regex.Pattern;
 import org.eclipse.xtext.common.services.DefaultTerminalConverters;
 import org.eclipse.xtext.conversion.IValueConverter;
 import org.eclipse.xtext.conversion.ValueConverter;
+import org.eclipse.xtext.conversion.ValueConverterException;
 import org.eclipse.xtext.conversion.impl.AbstractNullSafeConverter;
-import org.eclipse.xtext.conversion.impl.STRINGValueConverter;
 import org.eclipse.xtext.nodemodel.INode;
-
-import com.google.inject.Inject;
 
 public class SitemapConverters extends DefaultTerminalConverters {
 
     private static final Pattern ID_PATTERN = Pattern.compile("\\p{Alpha}\\w*");
 
-    @Inject
-    private STRINGValueConverter stringValueConverter;
-
     @ValueConverter(rule = "Icon")
-    public IValueConverter<String> BIG_DECIMAL() {
-        return stringValueConverter;
+    public IValueConverter<String> Icon() {
+
+        return new IValueConverter<String>() {
+
+            @Override
+            public String toValue(String string, INode node) throws ValueConverterException {
+                if (string != null && string.startsWith("\"")) {
+                    return string.substring(1, string.length() - 1);
+                }
+                return string;
+            }
+
+            @Override
+            public String toString(String value) throws ValueConverterException {
+                if (containsWhiteSpace(value)) {
+                    return "\"" + value + "\"";
+                }
+                return value;
+            }
+
+        };
     }
 
     @ValueConverter(rule = "Command")
@@ -51,5 +65,16 @@ public class SitemapConverters extends DefaultTerminalConverters {
                 }
             }
         };
+    }
+
+    public static boolean containsWhiteSpace(final String string) {
+        if (string != null) {
+            for (int i = 0; i < string.length(); i++) {
+                if (Character.isWhitespace(string.charAt(i))) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 }

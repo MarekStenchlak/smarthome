@@ -10,9 +10,9 @@ package org.eclipse.smarthome.automation.internal.core.provider;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Enumeration;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -21,7 +21,6 @@ import org.eclipse.smarthome.automation.Rule;
 import org.eclipse.smarthome.automation.RuleProvider;
 import org.eclipse.smarthome.automation.RuleRegistry;
 import org.eclipse.smarthome.automation.parser.Parser;
-import org.eclipse.smarthome.automation.parser.ParsingException;
 import org.eclipse.smarthome.core.common.registry.ManagedProvider;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
@@ -64,7 +63,8 @@ public class RuleResourceBundleImporter extends AbstractResourceBundleProvider<R
      * This constructor is responsible for initializing the path to resources and tracking the managing service of the
      * {@link Rule}s.
      *
-     * @param context is the {@code BundleContext}, used for creating a tracker for {@link Parser} services.
+     * @param context
+     *            is the {@code BundleContext}, used for creating a tracker for {@link Parser} services.
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
     public RuleResourceBundleImporter(BundleContext context) {
@@ -156,15 +156,15 @@ public class RuleResourceBundleImporter extends AbstractResourceBundleProvider<R
      * This method provides functionality for processing the bundles with rule resources.
      * <p>
      * Checks for availability of the needed {@link Parser} and for availability of the rules managing service. If one
-     * of them is not available - the bundle is added into {@link #waitingProviders} and the execution of the method
-     * ends.
+     * of
+     * them is not available - the bundle is added into {@link #waitingProviders} and the execution of the method ends.
      * <p>
      * Continues with loading the rules. If a rule already exists, it is updated, otherwise it is added.
      * <p>
      * The loading can fail because of {@link IOException}.
      *
-     * @param bundle it is a {@link Bundle} which has to be processed, because it provides resources for automation
-     *            rules.
+     * @param bundle
+     *            it is a {@link Bundle} which has to be processed, because it provides resources for automation rules.
      */
     @Override
     protected void processAutomationProvider(Bundle bundle) {
@@ -173,97 +173,93 @@ public class RuleResourceBundleImporter extends AbstractResourceBundleProvider<R
         try {
             urlEnum = bundle.findEntries(path, null, false);
         } catch (IllegalStateException e) {
-            logger.debug("Can't read from resource of bundle with ID " + bundle.getBundleId()
-                    + ". The bundle is uninstalled.", e);
+            logger.debug("Can't read from resource of bundle with ID {}. The bundle is uninstalled.",
+                    bundle.getBundleId(), e);
             processAutomationProviderUninstalled(bundle);
         }
         if (urlEnum == null) {
             return;
         }
         Vendor vendor = new Vendor(bundle.getSymbolicName(), bundle.getVersion().toString());
+        synchronized (providerPortfolio) {
+            providerPortfolio.put(vendor, Collections.<String> emptyList());
+        }
         while (urlEnum.hasMoreElements()) {
             URL url = urlEnum.nextElement();
             String parserType = getParserType(url);
             Parser<Rule> parser = parsers.get(parserType);
-            synchronized (waitingProviders) {
-                List<URL> urlList = waitingProviders.get(bundle);
-                if (parser != null) {
-                    if (urlList != null && urlList.remove(url) && urlList.isEmpty()) {
-                        waitingProviders.remove(bundle);
-                    }
-                    InputStreamReader reader = null;
+            updateWaitingProviders(parser, bundle, url);
+            InputStreamReader reader = null;
+            try {
+                Set<Rule> rules = setUIDs(vendor, parseData(parser, reader = new InputStreamReader(url.openStream())));
+                addNewProvidedObjects(null, rules);
+            } catch (IOException e) {
+                logger.error("Can't read from resource of bundle with ID " + bundle.getBundleId(), e);
+                processAutomationProviderUninstalled(bundle);
+            } finally {
+                if (reader != null) {
                     try {
-                        importData(vendor, parser, reader = new InputStreamReader(url.openStream()));
-                    } catch (IOException e) {
-                        logger.error("Can't read from resource of bundle with ID " + bundle.getBundleId(), e);
-                        processAutomationProviderUninstalled(bundle);
-                    } finally {
-                        if (reader != null) {
-                            try {
-                                reader.close();
-                            } catch (IOException ignore) {
-                            }
-                        }
+                        reader.close();
+                    } catch (IOException ignore) {
                     }
-                } else if (parser == null) {
-                    if (urlList == null) {
-                        urlList = new ArrayList<URL>();
-                    }
-                    urlList.add(url);
-                    waitingProviders.put(bundle, urlList);
                 }
             }
         }
     }
 
     @Override
-    protected Set<Rule> importData(Vendor vendor, Parser<Rule> parser, InputStreamReader inputStreamReader) {
-        Set<Rule> providedRules = null;
-        try {
-            providedRules = parser.parse(inputStreamReader);
-        } catch (ParsingException e) {
-        }
-        if (providedRules != null && !providedRules.isEmpty()) {
-            Iterator<Rule> i = providedRules.iterator();
+    protected void addNewProvidedObjects(List<String> newPortfolio, Set<Rule> parsedObjects) {
+        if (parsedObjects != null && !parsedObjects.isEmpty()) {
+            Iterator<Rule> i = parsedObjects.iterator();
             while (i.hasNext()) {
                 Rule rule = i.next();
                 if (rule != null) {
                     try {
-                        if (rule.getUID() == null) {
-                            rule = setUID(vendor, rule);
-                        }
                         ruleRegistry.add(rule);
                     } catch (IllegalArgumentException e) {
-                        logger.debug("Not importing rule '{}' since a rule with this id already exists", rule.getUID());
+                        logger.debug("Not importing rule '{}' because: {}", rule.getUID(), e.getMessage(), e);
                     } catch (IllegalStateException e) {
                         logger.debug("Not importing rule '{}' since the rule registry is in an invalid state: {}",
-                                new Object[] { rule.getUID(), e.getMessage() });
+                                rule.getUID(), e.getMessage());
                     }
-                }
-            } // while
-            synchronized (providerPortfolio) {
-                if (providerPortfolio.get(vendor) == null) {
-                    providerPortfolio.put(vendor, Collections.<String> emptyList());
                 }
             }
         }
-        return providedRules;
+    }
+
+    private Set<Rule> setUIDs(Vendor vendor, Set<Rule> rules) {
+        Set<Rule> newRules = new HashSet<Rule>();
+        for (Rule rule : rules) {
+            if (rule.getUID() == null) {
+                rule = setUID(vendor, rule);
+            }
+            newRules.add(rule);
+        }
+        return newRules;
     }
 
     /**
      * This method gives UIDs on the rules that don't have one.
      *
-     * @param vendor is the bundle providing the rules.
-     * @param rule is the provided rule.
+     * @param vendor
+     *            is the bundle providing the rules.
+     * @param rule
+     *            is the provided rule.
      */
     private Rule setUID(Vendor vendor, Rule rule) {
         String uid = vendor.getVendorID() + vendor.count();
         Rule r = new Rule(uid, rule.getTriggers(), rule.getConditions(), rule.getActions(),
-                rule.getConfigurationDescriptions(), rule.getConfiguration());
+                rule.getConfigurationDescriptions(), rule.getConfiguration(), rule.getTemplateUID(),
+                rule.getVisibility());
         r.setName(rule.getName());
         r.setDescription(rule.getDescription());
         r.setTags(rule.getTags());
         return r;
+    }
+
+    @Override
+    protected void updateProviderRegistration() {
+        // do nothing
     }
 
 }

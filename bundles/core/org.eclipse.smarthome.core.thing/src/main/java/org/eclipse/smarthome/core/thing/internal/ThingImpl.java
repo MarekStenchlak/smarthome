@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2016 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -13,7 +13,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.eclipse.smarthome.config.core.Configuration;
-import org.eclipse.smarthome.core.items.GroupItem;
 import org.eclipse.smarthome.core.thing.Channel;
 import org.eclipse.smarthome.core.thing.Thing;
 import org.eclipse.smarthome.core.thing.ThingStatus;
@@ -57,12 +56,12 @@ public class ThingImpl implements Thing {
 
     private ThingTypeUID thingTypeUID;
 
-    transient volatile private ThingStatusInfo status = ThingStatusInfoBuilder.create(ThingStatus.UNINITIALIZED,
-            ThingStatusDetail.NONE).build();
+    private String location;
+
+    transient volatile private ThingStatusInfo status = ThingStatusInfoBuilder
+            .create(ThingStatus.UNINITIALIZED, ThingStatusDetail.NONE).build();
 
     transient volatile private ThingHandler thingHandler;
-
-    transient volatile private GroupItem linkedItem;
 
     /**
      * Package protected default constructor to allow reflective instantiation.
@@ -203,20 +202,6 @@ public class ThingImpl implements Thing {
         this.thingTypeUID = thingTypeUID;
     }
 
-    public void setLinkedItem(GroupItem groupItem) {
-        this.linkedItem = groupItem;
-    }
-
-    @Override
-    public GroupItem getLinkedItem() {
-        return this.linkedItem;
-    }
-
-    @Override
-    public boolean isLinked() {
-        return getLinkedItem() != null;
-    }
-
     @Override
     public Map<String, String> getProperties() {
         synchronized (this) {
@@ -238,6 +223,21 @@ public class ThingImpl implements Thing {
     }
 
     @Override
+    public void setProperties(Map<String, String> properties) {
+        this.properties = new HashMap<>(properties);
+    }
+
+    @Override
+    public String getLocation() {
+        return location;
+    }
+
+    @Override
+    public void setLocation(String location) {
+        this.location = location;
+    }
+
+    @Override
     public int hashCode() {
         final int prime = 31;
         int result = 1;
@@ -247,18 +247,23 @@ public class ThingImpl implements Thing {
 
     @Override
     public boolean equals(Object obj) {
-        if (this == obj)
+        if (this == obj) {
             return true;
-        if (obj == null)
+        }
+        if (obj == null) {
             return false;
-        if (getClass() != obj.getClass())
+        }
+        if (getClass() != obj.getClass()) {
             return false;
+        }
         ThingImpl other = (ThingImpl) obj;
         if (uid == null) {
-            if (other.uid != null)
+            if (other.uid != null) {
                 return false;
-        } else if (!uid.equals(other.uid))
+            }
+        } else if (!uid.equals(other.uid)) {
             return false;
+        }
         return true;
     }
 

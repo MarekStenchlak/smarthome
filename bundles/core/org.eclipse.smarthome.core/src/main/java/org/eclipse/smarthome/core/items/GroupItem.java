@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2016 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -25,6 +25,8 @@ import com.google.common.collect.ImmutableSet;
 
 public class GroupItem extends GenericItem implements StateChangeListener {
 
+    public static final String TYPE = "Group";
+
     private final Logger logger = LoggerFactory.getLogger(GroupItem.class);
 
     protected final GenericItem baseItem;
@@ -42,7 +44,7 @@ public class GroupItem extends GenericItem implements StateChangeListener {
     }
 
     public GroupItem(String name, GenericItem baseItem, GroupFunction function) {
-        super("Group", name);
+        super(TYPE, name);
         members = new CopyOnWriteArraySet<Item>();
         this.function = function;
         this.baseItem = baseItem;
@@ -52,17 +54,26 @@ public class GroupItem extends GenericItem implements StateChangeListener {
      * Returns the base item of this {@link GroupItem}. This method is only
      * intended to allow instance checks of the underlying BaseItem. It must
      * not be changed in any way.
-     * 
+     *
      * @return the base item of this GroupItem
      */
-    public GenericItem getBaseItem() {
+    public Item getBaseItem() {
         return baseItem;
+    }
+
+    /**
+     * Returns the function of this {@link GroupItem}.
+     *
+     * @return the function of this GroupItem
+     */
+    public GroupFunction getFunction() {
+        return function;
     }
 
     /**
      * Returns the direct members of this {@link GroupItem} regardless if these
      * members are {@link GroupItem}s as well.
-     * 
+     *
      * @return the direct members of this {@link GroupItem}
      */
     public Set<Item> getMembers() {
@@ -73,7 +84,7 @@ public class GroupItem extends GenericItem implements StateChangeListener {
      * Returns the direct members of this {@link GroupItem} and recursively all
      * members of the potentially contained {@link GroupItem}s as well. The {@link GroupItem}s itself aren't contained.
      * The returned items are unique.
-     * 
+     *
      * @return all members of this and all contained {@link GroupItem}s
      */
     public Set<Item> getAllMembers() {
@@ -92,7 +103,16 @@ public class GroupItem extends GenericItem implements StateChangeListener {
         }
     }
 
+    /**
+     * Adds the given item to the members of this group item.
+     *
+     * @param item the item to be added (must not be null)
+     * @throws IllegalArgumentException if the given item is null
+     */
     public void addMember(Item item) {
+        if (item == null) {
+            throw new IllegalArgumentException("Item must not be null!");
+        }
         members.add(item);
         if (item instanceof GenericItem) {
             GenericItem genericItem = (GenericItem) item;
@@ -100,7 +120,16 @@ public class GroupItem extends GenericItem implements StateChangeListener {
         }
     }
 
+    /**
+     * Removes the given item from the members of this group item.
+     *
+     * @param item the item to be removed (must not be null)
+     * @throws IllegalArgumentException if the given item is null
+     */
     public void removeMember(Item item) {
+        if (item == null) {
+            throw new IllegalArgumentException("Item must not be null!");
+        }
         members.remove(item);
         if (item instanceof GenericItem) {
             GenericItem genericItem = (GenericItem) item;
@@ -112,7 +141,7 @@ public class GroupItem extends GenericItem implements StateChangeListener {
      * The accepted data types of a group item is the same as of the underlying base item.
      * If none is defined, the intersection of all sets of accepted data types of all group
      * members is used instead.
-     * 
+     *
      * @return the accepted data types of this group item
      */
     @Override
@@ -139,7 +168,7 @@ public class GroupItem extends GenericItem implements StateChangeListener {
      * The accepted command types of a group item is the same as of the underlying base item.
      * If none is defined, the intersection of all sets of accepted command types of all group
      * members is used instead.
-     * 
+     *
      * @return the accepted command types of this group item
      */
     @Override
@@ -248,7 +277,7 @@ public class GroupItem extends GenericItem implements StateChangeListener {
      * @{inheritDoc
      */
     @Override
-    public void stateChanged(Item item, State oldState, State newState) { 
+    public void stateChanged(Item item, State oldState, State newState) {
     }
 
     /**
@@ -263,9 +292,15 @@ public class GroupItem extends GenericItem implements StateChangeListener {
         }
     }
 
+    @Override
     public void setState(State state) {
         State oldState = this.state;
-        this.state = state;
+        if (baseItem != null) {
+            baseItem.setState(state);
+            this.state = baseItem.getState();
+        } else {
+            this.state = state;
+        }
         notifyListeners(oldState, state);
     }
 

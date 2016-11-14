@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2016 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -77,7 +77,7 @@ public class PageRenderer extends AbstractWidgetRenderer {
         if (label.contains("[") && label.endsWith("]")) {
             label = label.replace("[", "").replace("]", "");
         }
-        snippet = StringUtils.replace(snippet, "%label%", label);
+        snippet = StringUtils.replace(snippet, "%label%", escapeHtml(label));
         snippet = StringUtils.replace(snippet, "%servletname%", WebAppServlet.SERVLET_NAME);
         snippet = StringUtils.replace(snippet, "%sitemap%", sitemap);
         snippet = StringUtils.replace(snippet, "%htmlclass%", config.getCssClassList());
@@ -105,7 +105,7 @@ public class PageRenderer extends AbstractWidgetRenderer {
             EObject firstChild = children.get(0);
             EObject parent = firstChild.eContainer();
             if (!(firstChild instanceof Frame || parent instanceof Frame || parent instanceof Sitemap
-                    || parent instanceof List)) {
+                    || parent instanceof org.eclipse.smarthome.model.sitemap.List)) {
                 String frameSnippet = getSnippet("frame");
                 frameSnippet = StringUtils.replace(frameSnippet, "%label%", "");
                 frameSnippet = StringUtils.replace(frameSnippet, "%frame_class%", "mdl-form--no-label");
@@ -161,11 +161,6 @@ public class PageRenderer extends AbstractWidgetRenderer {
      */
     @Override
     public EList<Widget> renderWidget(Widget w, StringBuilder sb) throws RenderException {
-        // Check if this widget is visible
-        if (itemUIRegistry.getVisiblity(w) == false) {
-            return null;
-        }
-
         for (WidgetRenderer renderer : widgetRenderers) {
             if (renderer.canRender(w)) {
                 return renderer.renderWidget(w, sb);
@@ -220,7 +215,7 @@ public class PageRenderer extends AbstractWidgetRenderer {
 
         listSnippet = StringUtils.replace(listSnippet, "%items%", sb.toString());
 
-        pageSnippet = StringUtils.replace(pageSnippet, "%title%", "openHAB BasicUI");
+        pageSnippet = StringUtils.replace(pageSnippet, "%title%", "BasicUI");
         pageSnippet = StringUtils.replace(pageSnippet, "%htmlclass%",
                 config.getCssClassList() + " page-welcome-sitemaps");
         pageSnippet = StringUtils.replace(pageSnippet, "%content%", listSnippet);

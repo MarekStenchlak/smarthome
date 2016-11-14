@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2016 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -170,7 +170,7 @@ public class LightStateConverter {
      * @return percent type representing the color temperature
      */
     public static PercentType toColorTemperaturePercentType(State lightState) {
-        int percent = (lightState.getColorTemperature() - MIN_COLOR_TEMPERATURE) / COLOR_TEMPERATURE_RANGE;
+        int percent = (int) Math.round(((lightState.getColorTemperature() - MIN_COLOR_TEMPERATURE) * 100.0 )/ COLOR_TEMPERATURE_RANGE);
         return new PercentType(restrictToBounds(percent));
     }
 

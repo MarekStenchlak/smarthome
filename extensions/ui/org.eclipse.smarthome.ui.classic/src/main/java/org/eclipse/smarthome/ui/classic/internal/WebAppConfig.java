@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 openHAB UG (haftungsbeschraenkt) and others.
+ * Copyright (c) 2014-2016 by the respective copyright holders.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -29,7 +29,7 @@ public class WebAppConfig {
     public void applyConfig(Map<String, Object> configProps) {
         String configIconType = (String) configProps.get("iconType");
         String configDefaultSitemap = (String) configProps.get("defaultSitemap");
-        String configHtmlCacheDisabled = (String) configProps.get("disableHtmlCache");
+        Object configHtmlCacheDisabled = configProps.get("disableHtmlCache");
 
         if (configDefaultSitemap == null) {
             configDefaultSitemap = DEFAULT_SITEMAP;
@@ -41,7 +41,7 @@ public class WebAppConfig {
             configIconType = DEFAULT_ICON_TYPE;
         }
 
-        if ("true".equalsIgnoreCase(configHtmlCacheDisabled)) {
+        if (configHtmlCacheDisabled != null && "true".equalsIgnoreCase(configHtmlCacheDisabled.toString())) {
             htmlCacheDisabled = true;
         }
 
