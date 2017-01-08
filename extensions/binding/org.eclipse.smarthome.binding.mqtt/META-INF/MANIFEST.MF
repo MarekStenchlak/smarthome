@@ -26,6 +26,9 @@ Import-Package:
  org.eclipse.smarthome.core.types,
  org.eclipse.smarthome.io.transport.mqtt,
  org.eclipse.smarthome.model.item,
+ org.openhab.core.items,
+ org.openhab.core.library.types,
+ org.openhab.core.types,
  org.osgi.framework;version="1.8.0",
  org.osgi.service.cm;version="1.5.0",
  org.slf4j
