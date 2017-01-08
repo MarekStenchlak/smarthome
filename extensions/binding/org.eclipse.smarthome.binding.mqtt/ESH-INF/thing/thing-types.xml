@@ -73,7 +73,7 @@
 
 	</thing-type>
 
-	<channel-type id="number-channel">
+	<channel-type id="Number-channel">
 		<item-type>Number</item-type>
 		<label>Number type MQTT payload</label>
 		<description>Channel for mapping Number types to MQTT messages</description>
@@ -107,7 +107,7 @@
 
 	</channel-type>
 
-	<channel-type id="switch-channel">
+	<channel-type id="Switch-channel">
 		<item-type>Switch</item-type>
 		<label>Switch type MQTT payload</label>
 		<description>Channel for mapping Switch types to MQTT messages</description>
@@ -141,7 +141,7 @@
 
 	</channel-type>
 
-	<channel-type id="color-channel">
+	<channel-type id="Color-channel">
 		<item-type>Color</item-type>
 		<label>Color type MQTT payload</label>
 		<description>Channel for mapping Color types to MQTT messages</description>
@@ -175,7 +175,7 @@
 
 	</channel-type>
 
-	<channel-type id="contact-channel">
+	<channel-type id="Contact-channel">
 		<item-type>Contact</item-type>
 		<label>Contact type MQTT payload</label>
 		<description>Channel for mapping Contact types (OPEN/CLOSED) to MQTT messages</description>
@@ -209,7 +209,7 @@
 
 	</channel-type>
 
-	<channel-type id="datetime-channel">
+	<channel-type id="Datetime-channel">
 		<item-type>DateTime</item-type>
 		<label>DateTime type MQTT payload</label>
 		<description>Channel for mapping Datetime types to MQTT messages</description>
@@ -242,7 +242,7 @@
 
 	</channel-type>
 
-	<channel-type id="rollershutter-channel">
+	<channel-type id="Rollershutter-channel">
 		<item-type>Rollershutter</item-type>
 		<label>Rollershutter type MQTT payload</label>
 		<description>Channel for mapping Rollershutter types to MQTT messages</description>
@@ -275,7 +275,7 @@
 
 	</channel-type>
 
-	<channel-type id="dimmer-channel">
+	<channel-type id="Dimmer-channel">
 		<item-type>Dimmer</item-type>
 		<label>Dimmer type MQTT payload</label>
 		<description>Channel for mapping Dimmer types to MQTT messages</description>
@@ -308,7 +308,7 @@
 
 	</channel-type>
 
-	<channel-type id="string-channel">
+	<channel-type id="String-channel">
 		<item-type>String</item-type>
 		<label>string type MQTT payload</label>
 		<description>Channel for mapping string types to MQTT messages</description>
